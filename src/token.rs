@@ -1,6 +1,7 @@
 #[derive(Debug, PartialEq, Eq)]
 enum TokenKind {
-    RESERVED(char),
+    PLUS,
+    MINUS,
     NUM(u32),
 }
 
@@ -18,8 +19,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             continue;
         }
         match c {
-            '+' | '-' => tokens.push(Token {
-                kind: TokenKind::RESERVED(c),
+            '+' => tokens.push(Token {
+                kind: TokenKind::PLUS,
+            }),
+            '-' => tokens.push(Token {
+                kind: TokenKind::MINUS,
             }),
             n if n.is_numeric() => {
                 let mut num = 0;
@@ -52,13 +56,13 @@ mod tests {
                     kind: TokenKind::NUM(12)
                 },
                 Token {
-                    kind: TokenKind::RESERVED('+')
+                    kind: TokenKind::PLUS
                 },
                 Token {
                     kind: TokenKind::NUM(5),
                 },
                 Token {
-                    kind: TokenKind::RESERVED('-')
+                    kind: TokenKind::MINUS
                 },
                 Token {
                     kind: TokenKind::NUM(1),
