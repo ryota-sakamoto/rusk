@@ -1,5 +1,7 @@
 use std::env::args;
 
+mod token;
+
 fn main() {
     let args: Vec<String> = args().collect();
     if args.len() < 2 {
