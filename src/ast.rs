@@ -1,13 +1,13 @@
 use crate::token::{Token, TokenKind};
 
 #[derive(PartialEq, Eq, Debug)]
-enum Node {
+pub enum Node {
     ADD(Box<Node>, Box<Node>),
     SUB(Box<Node>, Box<Node>),
     NUM(u32),
 }
 
-struct Parser<'a> {
+pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
     pos: usize,
 }

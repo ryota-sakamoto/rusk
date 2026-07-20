@@ -1,6 +1,7 @@
 use std::env::args;
 
 mod ast;
+mod code;
 mod token;
 
 fn main() {
@@ -12,10 +13,13 @@ fn main() {
     let p = &args[1];
 
     println!("define i32 @main(i32, i8**) {{");
-    println!("  %3 = alloca i32");
-    println!("  store i32 {}, ptr %3", p);
-    println!("  %4 = load i32, ptr %3");
-    println!("  ret i32 %4");
+
+    let tokens = token::tokenize(p);
+    let mut parser = ast::Parser::new(&tokens);
+    let node = parser.expr();
+    let ret = code::generate(&node, 3);
+
+    println!("  ret i32 %{}", ret);
     println!("}}");
 }
 
@@ -62,5 +66,6 @@ mod tests {
     fn test_return_numbers() {
         run_and_assert("0", 0);
         run_and_assert("42", 42);
+        run_and_assert("12+5-1", 16);
     }
 }
