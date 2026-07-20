@@ -67,5 +67,6 @@ mod tests {
         run_and_assert("0", 0);
         run_and_assert("42", 42);
         run_and_assert("12+5-1", 16);
+        run_and_assert("33*4+8", 140);
     }
 }

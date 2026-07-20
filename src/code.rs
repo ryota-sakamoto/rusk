@@ -16,6 +16,13 @@ pub fn generate(node: &Node, index: u64) -> u64 {
 
             return rn + 1;
         }
+        Node::MUL(l, r) => {
+            let ln = generate(l, index);
+            let rn = generate(r, ln + 1);
+            println!("  %{} = mul i32 %{}, %{}", rn + 1, ln, rn);
+
+            return rn + 1;
+        }
         Node::NUM(n) => {
             println!("  %{} = alloca i32", index);
             println!("  store i32 {}, ptr %{}", n, index);

@@ -4,6 +4,7 @@ use crate::token::{Token, TokenKind};
 pub enum Node {
     ADD(Box<Node>, Box<Node>),
     SUB(Box<Node>, Box<Node>),
+    MUL(Box<Node>, Box<Node>),
     NUM(u32),
 }
 
@@ -47,7 +48,15 @@ impl<'a> Parser<'a> {
     }
 
     fn mul(&mut self) -> Node {
-        return self.primary();
+        let mut node = self.primary();
+
+        loop {
+            if self.consume(TokenKind::MUL) {
+                node = Node::MUL(Box::new(node), Box::new(self.mul()));
+            } else {
+                return node;
+            }
+        }
     }
 
     fn primary(&mut self) -> Node {
