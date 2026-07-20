@@ -6,7 +6,7 @@ pub enum Node {
     SUB(Box<Node>, Box<Node>),
     MUL(Box<Node>, Box<Node>),
     DIV(Box<Node>, Box<Node>),
-    NUM(u32),
+    NUM(i32),
 }
 
 pub struct Parser<'a> {
@@ -49,7 +49,7 @@ impl<'a> Parser<'a> {
     }
 
     fn mul(&mut self) -> Node {
-        let mut node = self.primary();
+        let mut node = self.unary();
 
         loop {
             if self.consume(TokenKind::MUL) {
@@ -60,6 +60,16 @@ impl<'a> Parser<'a> {
                 return node;
             }
         }
+    }
+
+    fn unary(&mut self) -> Node {
+        if self.consume(TokenKind::PLUS) {
+            // noop
+        } else if self.consume(TokenKind::MINUS) {
+            return Node::SUB(Box::new(Node::NUM(0)), Box::new(self.primary()));
+        }
+
+        return self.primary();
     }
 
     fn primary(&mut self) -> Node {

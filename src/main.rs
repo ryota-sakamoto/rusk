@@ -59,7 +59,7 @@ mod tests {
             .expect("Failed to run compiled binary");
 
         let exit_code = run_status.code().expect("Process terminated by signal");
-        assert_eq!(exit_code, expected);
+        assert_eq!(exit_code, expected as u8 as i32);
     }
 
     #[test]
@@ -70,5 +70,6 @@ mod tests {
         run_and_assert("33*4+8", 140);
         run_and_assert("28+4*8-12/2", 54);
         run_and_assert("12*(4+3)-3", 81);
+        run_and_assert("22*-5+49", -61);
     }
 }

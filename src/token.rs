@@ -6,7 +6,7 @@ pub enum TokenKind {
     DIV,
     LPAREN,
     RPAREN,
-    NUM(u32),
+    NUM(i32),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -49,7 +49,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     num = num * 10 + n2.to_digit(10).unwrap();
                 }
                 tokens.push(Token {
-                    kind: TokenKind::NUM(num),
+                    kind: TokenKind::NUM(num as i32),
                 })
             }
             _ => {}
