@@ -1,13 +1,13 @@
 #[derive(Debug, PartialEq, Eq)]
-enum TokenKind {
+pub enum TokenKind {
     PLUS,
     MINUS,
     NUM(u32),
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Token {
-    kind: TokenKind,
+pub struct Token {
+    pub kind: TokenKind,
 }
 
 pub fn tokenize(input: &str) -> Vec<Token> {

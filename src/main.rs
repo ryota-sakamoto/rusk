@@ -1,5 +1,6 @@
 use std::env::args;
 
+mod ast;
 mod token;
 
 fn main() {
