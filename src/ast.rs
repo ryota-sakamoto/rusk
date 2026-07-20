@@ -63,6 +63,14 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> Node {
+        if self.consume(TokenKind::LPAREN) {
+            let node = self.expr();
+            if !self.consume(TokenKind::RPAREN) {
+                panic!("should be TokenKind::RPAREN")
+            }
+            return node;
+        }
+
         if let Some(t) = self.current()
             && let TokenKind::NUM(n) = t.kind
         {
