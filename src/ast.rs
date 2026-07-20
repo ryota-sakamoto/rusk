@@ -5,6 +5,7 @@ pub enum Node {
     ADD(Box<Node>, Box<Node>),
     SUB(Box<Node>, Box<Node>),
     MUL(Box<Node>, Box<Node>),
+    DIV(Box<Node>, Box<Node>),
     NUM(u32),
 }
 
@@ -53,6 +54,8 @@ impl<'a> Parser<'a> {
         loop {
             if self.consume(TokenKind::MUL) {
                 node = Node::MUL(Box::new(node), Box::new(self.mul()));
+            } else if self.consume(TokenKind::DIV) {
+                node = Node::DIV(Box::new(node), Box::new(self.mul()));
             } else {
                 return node;
             }

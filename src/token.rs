@@ -3,6 +3,7 @@ pub enum TokenKind {
     PLUS,
     MINUS,
     MUL,
+    DIV,
     NUM(u32),
 }
 
@@ -28,6 +29,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }),
             '*' => tokens.push(Token {
                 kind: TokenKind::MUL,
+            }),
+            '/' => tokens.push(Token {
+                kind: TokenKind::DIV,
             }),
             n if n.is_numeric() => {
                 let mut num = 0;
