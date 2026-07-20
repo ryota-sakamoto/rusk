@@ -12,6 +12,8 @@ fn main() {
 
     let p = &args[1];
 
+    println!(r#"@.str = private unnamed_addr constant [3 x i8] c"%d\00""#);
+    println!("declare i32 @printf(ptr, ...)");
     println!("define i32 @main(i32, i8**) {{");
 
     let tokens = token::tokenize(p);
@@ -19,7 +21,8 @@ fn main() {
     let node = parser.expr();
     let ret = code::generate(&node, 3);
 
-    println!("  ret i32 %{}", ret);
+    println!("  call i32 (ptr, ...) @printf(ptr @.str, i32 %{})", ret);
+    println!("  ret i32 0");
     println!("}}");
 }
 
@@ -54,12 +57,15 @@ mod tests {
             .expect("Failed to run clang");
         assert!(clang_status.success());
 
-        let run_status = Command::new(&exe_path)
-            .status()
+        let run_output = Command::new(&exe_path)
+            .output()
             .expect("Failed to run compiled binary");
 
-        let exit_code = run_status.code().expect("Process terminated by signal");
-        assert_eq!(exit_code, expected as u8 as i32);
+        assert!(run_output.status.success());
+
+        let run_stdout = String::from_utf8(run_output.stdout).unwrap();
+        let a: i32 = run_stdout.parse().unwrap();
+        assert_eq!(a, expected);
     }
 
     #[test]
