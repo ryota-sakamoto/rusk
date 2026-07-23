@@ -1,4 +1,17 @@
+use core::panic;
+
 use crate::token::{Token, TokenKind};
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct Program {
+    pub functions: Vec<Function>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct Function {
+    name: String,
+    pub body: Vec<Node>,
+}
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Node {
@@ -34,7 +47,51 @@ impl<'a> Parser<'a> {
         return false;
     }
 
-    pub fn expr(&mut self) -> Node {
+    pub fn program(&mut self) -> Program {
+        let mut functions = Vec::new();
+        let f = self.function();
+        functions.push(f);
+
+        return Program { functions };
+    }
+
+    fn function(&mut self) -> Function {
+        if !self.consume(TokenKind::FN) {
+            panic!("should be TokenKind::FN");
+        }
+
+        let mut name = String::new();
+        let mut body = Vec::new();
+
+        if let Some(Token {
+            kind: TokenKind::IDENTIFIER(n),
+        }) = self.current()
+        {
+            name = n.to_owned();
+            self.pos += 1;
+        } else {
+            panic!("should be TokenKind::IDENTIFIER");
+        }
+
+        if !self.consume(TokenKind::LPAREN) {
+            panic!("should be TokenKind::LPAREN");
+        } else if !self.consume(TokenKind::RPAREN) {
+            panic!("should be TokenKind::RPAREN");
+        } else if !self.consume(TokenKind::LBRACE) {
+            panic!("should be TokenKind::LBRACE");
+        }
+
+        let node = self.expr();
+        body.push(node);
+
+        if !self.consume(TokenKind::RBRACE) {
+            panic!("should be TokenKind::RBRACE");
+        }
+
+        return Function { name, body };
+    }
+
+    fn expr(&mut self) -> Node {
         let mut node = self.mul();
 
         loop {

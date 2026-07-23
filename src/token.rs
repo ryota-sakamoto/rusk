@@ -6,6 +6,10 @@ pub enum TokenKind {
     DIV,
     LPAREN,
     RPAREN,
+    LBRACE,
+    RBRACE,
+    FN,
+    IDENTIFIER(String),
     NUM(i32),
 }
 
@@ -41,6 +45,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             ')' => tokens.push(Token {
                 kind: TokenKind::RPAREN,
             }),
+            '{' => tokens.push(Token {
+                kind: TokenKind::LBRACE,
+            }),
+            '}' => tokens.push(Token {
+                kind: TokenKind::RBRACE,
+            }),
             n if n.is_numeric() => {
                 let mut num = 0;
                 num += n.to_digit(10).unwrap();
@@ -52,7 +62,22 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     kind: TokenKind::NUM(num as i32),
                 })
             }
-            _ => {}
+            _ => {
+                let mut identifier = String::new();
+                identifier.push(c);
+                while let Some(c2) = chars.next_if(|c2| c2.is_alphanumeric()) {
+                    identifier.push(c2);
+                }
+
+                match identifier.as_str() {
+                    "fn" => tokens.push(Token {
+                        kind: TokenKind::FN,
+                    }),
+                    _ => tokens.push(Token {
+                        kind: TokenKind::IDENTIFIER(identifier),
+                    }),
+                }
+            }
         };
     }
 
@@ -64,7 +89,7 @@ mod tests {
     use crate::token::{Token, TokenKind, tokenize};
 
     #[test]
-    fn a() {
+    fn num() {
         assert_eq!(
             tokenize("12 + 5 - 1"),
             vec![
@@ -83,6 +108,33 @@ mod tests {
                 Token {
                     kind: TokenKind::NUM(1),
                 },
+            ]
+        );
+    }
+
+    #[test]
+    fn function() {
+        assert_eq!(
+            tokenize("fn main() {}"),
+            vec![
+                Token {
+                    kind: TokenKind::FN
+                },
+                Token {
+                    kind: TokenKind::IDENTIFIER("main".to_owned()),
+                },
+                Token {
+                    kind: TokenKind::LPAREN
+                },
+                Token {
+                    kind: TokenKind::RPAREN
+                },
+                Token {
+                    kind: TokenKind::LBRACE
+                },
+                Token {
+                    kind: TokenKind::RBRACE
+                }
             ]
         );
     }
