@@ -69,5 +69,7 @@ mod tests {
         run_and_assert("fn main() { return 28+4*8-12/2; }", 54);
         run_and_assert("fn main() { return 12*(4+3)-3; }", 81);
         run_and_assert("fn main() { return 22*-5+49; }", -61);
+        // 100 + 0
+        run_and_assert("fn f() { return 100; } fn main() { return f(); }", 1000);
     }
 }

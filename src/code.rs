@@ -63,5 +63,9 @@ fn generate_node(node: &Node, index: u64) -> u64 {
             println!("  ret i32 0");
             return 0;
         }
+        Node::CALL(name) => {
+            println!("  %{} = call i32 @{}()", index, name);
+            return index;
+        }
     }
 }

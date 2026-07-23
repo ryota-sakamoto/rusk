@@ -21,6 +21,7 @@ pub enum Node {
     DIV(Box<Node>, Box<Node>),
     NUM(i32),
     RET(Box<Node>),
+    CALL(String),
 }
 
 pub struct Parser<'a> {
@@ -48,6 +49,22 @@ impl<'a> Parser<'a> {
         return false;
     }
 
+    fn identifier(&mut self) -> Option<String> {
+        let result = if let Some(Token {
+            kind: TokenKind::IDENTIFIER(n),
+        }) = self.current()
+        {
+            Some(n.to_owned())
+        } else {
+            None
+        };
+        if result.is_some() {
+            self.pos += 1;
+        }
+
+        return result;
+    }
+
     pub fn program(&mut self) -> Program {
         let mut functions = Vec::new();
 
@@ -62,16 +79,7 @@ impl<'a> Parser<'a> {
     fn function(&mut self) -> Function {
         let mut body = Vec::new();
 
-        let name = if let Some(Token {
-            kind: TokenKind::IDENTIFIER(n),
-        }) = self.current()
-        {
-            n.to_owned()
-        } else {
-            panic!("should be TokenKind::IDENTIFIER");
-        };
-        self.pos += 1;
-
+        let name = self.identifier().expect("should be identifier");
         if !self.consume(TokenKind::LPAREN) {
             panic!("should be TokenKind::LPAREN");
         } else if !self.consume(TokenKind::RPAREN) {
@@ -142,6 +150,16 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> Node {
+        if let Some(identifier) = self.identifier() {
+            if !self.consume(TokenKind::LPAREN) {
+                panic!("should be TokenKind::LPAREN")
+            } else if !self.consume(TokenKind::RPAREN) {
+                panic!("should be TokenKind::RPAREN")
+            }
+
+            return Node::CALL(identifier);
+        }
+
         if self.consume(TokenKind::LPAREN) {
             let node = self.expr();
             if !self.consume(TokenKind::RPAREN) {
