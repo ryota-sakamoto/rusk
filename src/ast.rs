@@ -20,6 +20,7 @@ pub enum Node {
     MUL(Box<Node>, Box<Node>),
     DIV(Box<Node>, Box<Node>),
     NUM(i32),
+    RET(Box<Node>),
 }
 
 pub struct Parser<'a> {
@@ -89,12 +90,18 @@ impl<'a> Parser<'a> {
     }
 
     fn stmt(&mut self) -> Node {
+        let return_node = self.consume(TokenKind::RET);
+
         let node = self.expr();
         if !self.consume(TokenKind::SEMI) {
             panic!("should be TokenKind:: SEMI");
         }
 
-        return node;
+        return if return_node {
+            Node::RET(Box::new(node))
+        } else {
+            node
+        };
     }
 
     fn expr(&mut self) -> Node {

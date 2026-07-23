@@ -10,6 +10,7 @@ pub enum TokenKind {
     RBRACE,
     FN,
     SEMI,
+    RET,
     IDENTIFIER(String),
     NUM(i32),
 }
@@ -76,6 +77,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 match identifier.as_str() {
                     "fn" => tokens.push(Token {
                         kind: TokenKind::FN,
+                    }),
+                    "return" => tokens.push(Token {
+                        kind: TokenKind::RET,
                     }),
                     _ => tokens.push(Token {
                         kind: TokenKind::IDENTIFIER(identifier),

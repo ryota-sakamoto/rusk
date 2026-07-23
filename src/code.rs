@@ -4,11 +4,7 @@ pub fn generate(program: &Program) {
     println!(r#"@.str = private unnamed_addr constant [3 x i8] c"%d\00""#);
     println!("declare i32 @printf(ptr, ...)");
     println!("define i32 @main(i32, i8**) {{");
-
-    let ret = generate_node(&program.functions[0].body[0], 3);
-
-    println!("  call i32 (ptr, ...) @printf(ptr @.str, i32 %{})", ret);
-    println!("  ret i32 0");
+    generate_node(&program.functions[0].body[0], 3);
     println!("}}");
 }
 
@@ -47,6 +43,13 @@ fn generate_node(node: &Node, index: u64) -> u64 {
             println!("  store i32 {}, ptr %{}", n, index);
             println!("  %{} = load i32, ptr %{}", index + 1, index);
             return index + 1;
+        }
+        Node::RET(n) => {
+            // TODO: return ret instead of print
+            let ret = generate_node(n, index);
+            println!("  call i32 (ptr, ...) @printf(ptr @.str, i32 %{})", ret);
+            println!("  ret i32 0");
+            return 0;
         }
     }
 }
