@@ -49,17 +49,16 @@ impl<'a> Parser<'a> {
 
     pub fn program(&mut self) -> Program {
         let mut functions = Vec::new();
-        let f = self.function();
-        functions.push(f);
+
+        while self.consume(TokenKind::FN) {
+            let f = self.function();
+            functions.push(f);
+        }
 
         return Program { functions };
     }
 
     fn function(&mut self) -> Function {
-        if !self.consume(TokenKind::FN) {
-            panic!("should be TokenKind::FN");
-        }
-
         let mut name = String::new();
         let mut body = Vec::new();
 
@@ -81,7 +80,7 @@ impl<'a> Parser<'a> {
             panic!("should be TokenKind::LBRACE");
         }
 
-        let node = self.expr();
+        let node = self.stmt();
         body.push(node);
 
         if !self.consume(TokenKind::RBRACE) {
@@ -89,6 +88,15 @@ impl<'a> Parser<'a> {
         }
 
         return Function { name, body };
+    }
+
+    fn stmt(&mut self) -> Node {
+        let node = self.expr();
+        if !self.consume(TokenKind::SEMI) {
+            panic!("should be TokenKind:: SEMI");
+        }
+
+        return node;
     }
 
     fn expr(&mut self) -> Node {

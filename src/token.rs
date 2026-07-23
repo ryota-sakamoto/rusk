@@ -9,6 +9,7 @@ pub enum TokenKind {
     LBRACE,
     RBRACE,
     FN,
+    SEMI,
     IDENTIFIER(String),
     NUM(i32),
 }
@@ -50,6 +51,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }),
             '}' => tokens.push(Token {
                 kind: TokenKind::RBRACE,
+            }),
+            ';' => tokens.push(Token {
+                kind: TokenKind::SEMI,
             }),
             n if n.is_numeric() => {
                 let mut num = 0;

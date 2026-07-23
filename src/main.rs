@@ -70,12 +70,12 @@ mod tests {
 
     #[test]
     fn test_return_numbers() {
-        run_and_assert("fn main() { 0 }", 0);
-        run_and_assert("fn main() { 42 }", 42);
-        run_and_assert("fn main() { 12+5-1 }", 16);
-        run_and_assert("fn main() { 33*4+8 }", 140);
-        run_and_assert("fn main() { 28+4*8-12/2 }", 54);
-        run_and_assert("fn main() { 12*(4+3)-3 }", 81);
-        run_and_assert("fn main() { 22*-5+49 }", -61);
+        run_and_assert("fn main() { 0; }", 0);
+        run_and_assert("fn main() { 42; }", 42);
+        run_and_assert("fn main() { 12+5-1; }", 16);
+        run_and_assert("fn main() { 33*4+8; }", 140);
+        run_and_assert("fn main() { 28+4*8-12/2; }", 54);
+        run_and_assert("fn main() { 12*(4+3)-3; }", 81);
+        run_and_assert("fn main() { 22*-5+49; }", -61);
     }
 }
