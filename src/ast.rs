@@ -21,7 +21,7 @@ pub enum Node {
     DIV(Box<Node>, Box<Node>),
     NUM(i32),
     RET(Box<Node>),
-    CALL(String),
+    CALL(String, Vec<Node>),
 }
 
 pub struct Parser<'a> {
@@ -153,11 +153,18 @@ impl<'a> Parser<'a> {
         if let Some(identifier) = self.identifier() {
             if !self.consume(TokenKind::LPAREN) {
                 panic!("should be TokenKind::LPAREN")
-            } else if !self.consume(TokenKind::RPAREN) {
-                panic!("should be TokenKind::RPAREN")
             }
 
-            return Node::CALL(identifier);
+            let mut args = Vec::new();
+            if !self.consume(TokenKind::RPAREN) {
+                let expr = self.expr();
+                if !self.consume(TokenKind::RPAREN) {
+                    panic!("should be TokenKind::RPAREN")
+                }
+                args.push(expr);
+            }
+
+            return Node::CALL(identifier, args);
         }
 
         if self.consume(TokenKind::LPAREN) {

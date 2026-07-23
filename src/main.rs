@@ -62,14 +62,16 @@ mod tests {
 
     #[test]
     fn test_return_numbers() {
-        run_and_assert("fn main() { return 0; }", 0);
-        run_and_assert("fn main() { return 42; }", 42);
-        run_and_assert("fn main() { return 12+5-1; }", 16);
-        run_and_assert("fn main() { return 33*4+8; }", 140);
-        run_and_assert("fn main() { return 28+4*8-12/2; }", 54);
-        run_and_assert("fn main() { return 12*(4+3)-3; }", 81);
-        run_and_assert("fn main() { return 22*-5+49; }", -61);
-        // 100 + 0
-        run_and_assert("fn f() { return 100; } fn main() { return f(); }", 1000);
+        run_and_assert("fn main() { printf(0); return 0; }", 0);
+        run_and_assert("fn main() { printf(42); return 0; }", 42);
+        run_and_assert("fn main() { printf(12+5-1); return 0; }", 16);
+        run_and_assert("fn main() { printf(33*4+8); return 0; }", 140);
+        run_and_assert("fn main() { printf(28+4*8-12/2); return 0; }", 54);
+        run_and_assert("fn main() { printf(12*(4+3)-3); return 0; }", 81);
+        run_and_assert("fn main() { printf(22*-5+49); return 0; }", -61);
+        run_and_assert(
+            "fn f() { return 100; } fn main() { printf(f()); return 0; }",
+            100,
+        );
     }
 }

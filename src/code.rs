@@ -57,15 +57,30 @@ fn generate_node(node: &Node, index: u64) -> u64 {
             return index + 1;
         }
         Node::RET(n) => {
-            // TODO: return ret instead of print
             let ret = generate_node(n, index);
-            println!("  call i32 (ptr, ...) @printf(ptr @.str, i32 %{})", ret);
-            println!("  ret i32 0");
+            println!("  ret i32 %{}", ret);
             return 0;
         }
-        Node::CALL(name) => {
-            println!("  %{} = call i32 @{}()", index, name);
-            return index;
+        Node::CALL(name, args) => {
+            let mut call_args = Vec::new();
+
+            let mut next_index = index;
+            for arg in args {
+                let ret = generate_node(arg, next_index);
+                call_args.push(ret);
+                next_index = ret + 1;
+            }
+
+            if call_args.len() > 0 {
+                println!(
+                    "  %{} = call i32 @{}(ptr @.str, i32 %{})",
+                    next_index, name, call_args[0]
+                );
+            } else {
+                println!("  %{} = call i32 @{}()", next_index, name);
+            }
+
+            return next_index;
         }
     }
 }
