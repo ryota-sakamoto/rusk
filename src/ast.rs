@@ -9,7 +9,7 @@ pub struct Program {
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Function {
-    name: String,
+    pub name: String,
     pub body: Vec<Node>,
 }
 

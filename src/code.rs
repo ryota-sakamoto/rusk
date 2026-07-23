@@ -1,12 +1,20 @@
-use crate::ast::{Node, Program};
+use crate::ast::{Function, Node, Program};
 
 pub fn generate(program: &Program) {
     println!(r#"@.str = private unnamed_addr constant [3 x i8] c"%d\00""#);
     println!("declare i32 @printf(ptr, ...)");
-    println!("define i32 @main(i32, i8**) {{");
+    println!();
 
-    let mut index = 3;
-    for node in program.functions[0].body.iter() {
+    for f in program.functions.iter() {
+        generate_function(f);
+    }
+}
+
+fn generate_function(function: &Function) {
+    println!("define i32 @{}() {{", function.name);
+
+    let mut index = 1;
+    for node in function.body.iter() {
         index = generate_node(node, index) + 1;
     }
     println!("}}");
