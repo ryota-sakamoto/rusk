@@ -60,18 +60,17 @@ impl<'a> Parser<'a> {
     }
 
     fn function(&mut self) -> Function {
-        let mut name = String::new();
         let mut body = Vec::new();
 
-        if let Some(Token {
+        let name = if let Some(Token {
             kind: TokenKind::IDENTIFIER(n),
         }) = self.current()
         {
-            name = n.to_owned();
-            self.pos += 1;
+            n.to_owned()
         } else {
             panic!("should be TokenKind::IDENTIFIER");
-        }
+        };
+        self.pos += 1;
 
         if !self.consume(TokenKind::LPAREN) {
             panic!("should be TokenKind::LPAREN");
