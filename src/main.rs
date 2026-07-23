@@ -73,5 +73,9 @@ mod tests {
             "fn f() { return 100; } fn main() { printf(f()); return 0; }",
             100,
         );
+        run_and_assert(
+            "fn f() { let a = 5; let b = 4; return a * (b + 3); } fn main() { printf(f() - 12); return 0; }",
+            23,
+        );
     }
 }

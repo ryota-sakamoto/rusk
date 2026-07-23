@@ -21,6 +21,8 @@ pub enum Node {
     DIV(Box<Node>, Box<Node>),
     NUM(i32),
     RET(Box<Node>),
+    LET(String, Box<Node>),
+    RLET(String),
     CALL(String, Vec<Node>),
 }
 
@@ -98,6 +100,16 @@ impl<'a> Parser<'a> {
 
     fn stmt(&mut self) -> Node {
         let return_node = self.consume(TokenKind::RET);
+        let let_name = if self.consume(TokenKind::LET) {
+            let identifier = self.identifier().expect("should be identifier");
+            if !self.consume(TokenKind::EQ) {
+                panic!("should be TokenKind::EQ");
+            }
+
+            Some(identifier)
+        } else {
+            None
+        };
 
         let node = self.expr();
         if !self.consume(TokenKind::SEMI) {
@@ -106,6 +118,8 @@ impl<'a> Parser<'a> {
 
         return if return_node {
             Node::RET(Box::new(node))
+        } else if let Some(name) = let_name {
+            Node::LET(name, Box::new(node))
         } else {
             node
         };
@@ -152,7 +166,7 @@ impl<'a> Parser<'a> {
     fn primary(&mut self) -> Node {
         if let Some(identifier) = self.identifier() {
             if !self.consume(TokenKind::LPAREN) {
-                panic!("should be TokenKind::LPAREN")
+                return Node::RLET(identifier);
             }
 
             let mut args = Vec::new();

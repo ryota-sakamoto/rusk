@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::ast::{Function, Node, Program};
 
 pub fn generate(program: &Program) {
@@ -13,18 +15,26 @@ pub fn generate(program: &Program) {
 fn generate_function(function: &Function) {
     println!("define i32 @{}() {{", function.name);
 
-    let mut generator = GenerateFunction { index: 1 };
+    let mut generator = GenerateFunction::new();
     for node in function.body.iter() {
         generator.generate_node(node);
     }
     println!("}}");
 }
 
-struct GenerateFunction {
+struct GenerateFunction<'a> {
     index: u64,
+    map: HashMap<&'a str, u64>,
 }
 
-impl GenerateFunction {
+impl<'a> GenerateFunction<'a> {
+    fn new() -> Self {
+        Self {
+            index: 1,
+            map: HashMap::new(),
+        }
+    }
+
     fn new_reg(&mut self) -> u64 {
         let current = self.index;
         self.index += 1;
@@ -32,7 +42,7 @@ impl GenerateFunction {
         return current;
     }
 
-    fn generate_node(&mut self, node: &Node) -> u64 {
+    fn generate_node(&mut self, node: &'a Node) -> u64 {
         match node {
             Node::ADD(l, r) => {
                 let ln = self.generate_node(l);
@@ -104,6 +114,16 @@ impl GenerateFunction {
                 }
 
                 return reg;
+            }
+            Node::LET(name, right) => {
+                let r = self.generate_node(right);
+                self.map.insert(name, r);
+
+                return r;
+            }
+            Node::RLET(name) => {
+                let r = self.map.get(name.as_str()).unwrap();
+                return *r;
             }
         }
     }

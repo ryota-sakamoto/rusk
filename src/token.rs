@@ -11,6 +11,8 @@ pub enum TokenKind {
     FN,
     SEMI,
     RET,
+    LET,
+    EQ,
     IDENTIFIER(String),
     NUM(i32),
 }
@@ -56,6 +58,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             ';' => tokens.push(Token {
                 kind: TokenKind::SEMI,
             }),
+            '=' => tokens.push(Token {
+                kind: TokenKind::EQ,
+            }),
             n if n.is_numeric() => {
                 let mut num = 0;
                 num += n.to_digit(10).unwrap();
@@ -80,6 +85,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     }),
                     "return" => tokens.push(Token {
                         kind: TokenKind::RET,
+                    }),
+                    "let" => tokens.push(Token {
+                        kind: TokenKind::LET,
                     }),
                     _ => tokens.push(Token {
                         kind: TokenKind::IDENTIFIER(identifier),
