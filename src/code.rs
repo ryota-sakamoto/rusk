@@ -13,74 +13,98 @@ pub fn generate(program: &Program) {
 fn generate_function(function: &Function) {
     println!("define i32 @{}() {{", function.name);
 
-    let mut index = 1;
+    let mut generator = GenerateFunction { index: 1 };
     for node in function.body.iter() {
-        index = generate_node(node, index) + 1;
+        generator.generate_node(node);
     }
     println!("}}");
 }
 
-fn generate_node(node: &Node, index: u64) -> u64 {
-    match node {
-        Node::ADD(l, r) => {
-            let ln = generate_node(l, index);
-            let rn = generate_node(r, ln + 1);
-            println!("  %{} = add i32 %{}, %{}", rn + 1, ln, rn);
+struct GenerateFunction {
+    index: u64,
+}
 
-            return rn + 1;
-        }
-        Node::SUB(l, r) => {
-            let ln = generate_node(l, index);
-            let rn = generate_node(r, ln + 1);
-            println!("  %{} = sub i32 %{}, %{}", rn + 1, ln, rn);
+impl GenerateFunction {
+    fn new_reg(&mut self) -> u64 {
+        let current = self.index;
+        self.index += 1;
 
-            return rn + 1;
-        }
-        Node::MUL(l, r) => {
-            let ln = generate_node(l, index);
-            let rn = generate_node(r, ln + 1);
-            println!("  %{} = mul i32 %{}, %{}", rn + 1, ln, rn);
+        return current;
+    }
 
-            return rn + 1;
-        }
-        Node::DIV(l, r) => {
-            let ln = generate_node(l, index);
-            let rn = generate_node(r, ln + 1);
-            println!("  %{} = sdiv i32 %{}, %{}", rn + 1, ln, rn);
+    fn generate_node(&mut self, node: &Node) -> u64 {
+        match node {
+            Node::ADD(l, r) => {
+                let ln = self.generate_node(l);
+                let rn = self.generate_node(r);
 
-            return rn + 1;
-        }
-        Node::NUM(n) => {
-            println!("  %{} = alloca i32", index);
-            println!("  store i32 {}, ptr %{}", n, index);
-            println!("  %{} = load i32, ptr %{}", index + 1, index);
-            return index + 1;
-        }
-        Node::RET(n) => {
-            let ret = generate_node(n, index);
-            println!("  ret i32 %{}", ret);
-            return 0;
-        }
-        Node::CALL(name, args) => {
-            let mut call_args = Vec::new();
+                let reg = self.new_reg();
+                println!("  %{} = add i32 %{}, %{}", reg, ln, rn);
 
-            let mut next_index = index;
-            for arg in args {
-                let ret = generate_node(arg, next_index);
-                call_args.push(ret);
-                next_index = ret + 1;
+                return reg;
             }
+            Node::SUB(l, r) => {
+                let ln = self.generate_node(l);
+                let rn = self.generate_node(r);
 
-            if call_args.len() > 0 {
-                println!(
-                    "  %{} = call i32 @{}(ptr @.str, i32 %{})",
-                    next_index, name, call_args[0]
-                );
-            } else {
-                println!("  %{} = call i32 @{}()", next_index, name);
+                let reg = self.new_reg();
+                println!("  %{} = sub i32 %{}, %{}", reg, ln, rn);
+
+                return reg;
             }
+            Node::MUL(l, r) => {
+                let ln = self.generate_node(l);
+                let rn = self.generate_node(r);
 
-            return next_index;
+                let reg = self.new_reg();
+                println!("  %{} = mul i32 %{}, %{}", reg, ln, rn);
+
+                return reg;
+            }
+            Node::DIV(l, r) => {
+                let ln = self.generate_node(l);
+                let rn = self.generate_node(r);
+
+                let reg = self.new_reg();
+                println!("  %{} = sdiv i32 %{}, %{}", reg, ln, rn);
+
+                return reg;
+            }
+            Node::NUM(n) => {
+                let reg = self.new_reg();
+                println!("  %{} = alloca i32", reg);
+                println!("  store i32 {}, ptr %{}", n, reg);
+
+                let reg2 = self.new_reg();
+                println!("  %{} = load i32, ptr %{}", reg2, reg);
+
+                return reg2;
+            }
+            Node::RET(n) => {
+                let ret = self.generate_node(n);
+                println!("  ret i32 %{}", ret);
+                return 0;
+            }
+            Node::CALL(name, args) => {
+                let mut call_args = Vec::new();
+
+                for arg in args {
+                    let ret = self.generate_node(arg);
+                    call_args.push(ret);
+                }
+
+                let reg = self.new_reg();
+                if call_args.len() > 0 {
+                    println!(
+                        "  %{} = call i32 @{}(ptr @.str, i32 %{})",
+                        reg, name, call_args[0]
+                    );
+                } else {
+                    println!("  %{} = call i32 @{}()", reg, name);
+                }
+
+                return reg;
+            }
         }
     }
 }
