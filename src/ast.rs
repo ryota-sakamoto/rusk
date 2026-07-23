@@ -80,11 +80,9 @@ impl<'a> Parser<'a> {
             panic!("should be TokenKind::LBRACE");
         }
 
-        let node = self.stmt();
-        body.push(node);
-
-        if !self.consume(TokenKind::RBRACE) {
-            panic!("should be TokenKind::RBRACE");
+        while !self.consume(TokenKind::RBRACE) {
+            let node = self.stmt();
+            body.push(node);
         }
 
         return Function { name, body };

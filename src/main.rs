@@ -12,18 +12,10 @@ fn main() {
 
     let p = &args[1];
 
-    println!(r#"@.str = private unnamed_addr constant [3 x i8] c"%d\00""#);
-    println!("declare i32 @printf(ptr, ...)");
-    println!("define i32 @main(i32, i8**) {{");
-
     let tokens = token::tokenize(p);
     let mut parser = ast::Parser::new(&tokens);
     let program = parser.program();
-    let ret = code::generate(&program.functions[0].body[0], 3);
-
-    println!("  call i32 (ptr, ...) @printf(ptr @.str, i32 %{})", ret);
-    println!("  ret i32 0");
-    println!("}}");
+    code::generate(&program);
 }
 
 #[cfg(test)]
