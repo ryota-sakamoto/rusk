@@ -4,7 +4,11 @@ pub fn generate(program: &Program) {
     println!(r#"@.str = private unnamed_addr constant [3 x i8] c"%d\00""#);
     println!("declare i32 @printf(ptr, ...)");
     println!("define i32 @main(i32, i8**) {{");
-    generate_node(&program.functions[0].body[0], 3);
+
+    let mut index = 3;
+    for node in program.functions[0].body.iter() {
+        index = generate_node(node, index) + 1;
+    }
     println!("}}");
 }
 
