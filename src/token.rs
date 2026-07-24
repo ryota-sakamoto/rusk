@@ -76,7 +76,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     kind: TokenKind::NUM(num as i32),
                 })
             }
-            _ => {
+            n if n.is_alphanumeric() => {
                 let mut identifier = String::new();
                 identifier.push(c);
                 while let Some(c2) = chars.next_if(|c2| c2.is_alphanumeric()) {
@@ -98,6 +98,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     }),
                 }
             }
+            _ => panic!("not allowed: {}", c),
         };
     }
 
