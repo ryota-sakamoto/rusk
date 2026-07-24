@@ -77,5 +77,9 @@ mod tests {
             "fn f() { let a = 5; let b = 4; return a * (b + 3); } fn main() { printf(f() - 12); return 0; }",
             23,
         );
+        run_and_assert(
+            "fn f(a, b, c) { let d = (a - b) * c; return d * 4; } fn main() { printf(f(7, 3, 4)); return 0; }",
+            64,
+        );
     }
 }

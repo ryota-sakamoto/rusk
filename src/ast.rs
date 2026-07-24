@@ -10,6 +10,7 @@ pub struct Program {
 #[derive(PartialEq, Eq, Debug)]
 pub struct Function {
     pub name: String,
+    pub args: Vec<String>,
     pub body: Vec<Node>,
 }
 
@@ -84,7 +85,16 @@ impl<'a> Parser<'a> {
         let name = self.identifier().expect("should be identifier");
         if !self.consume(TokenKind::LPAREN) {
             panic!("should be TokenKind::LPAREN");
-        } else if !self.consume(TokenKind::RPAREN) {
+        }
+
+        let mut args = Vec::new();
+
+        while let Some(identifier) = self.identifier() {
+            args.push(identifier);
+            self.consume(TokenKind::COMMA);
+        }
+
+        if !self.consume(TokenKind::RPAREN) {
             panic!("should be TokenKind::RPAREN");
         } else if !self.consume(TokenKind::LBRACE) {
             panic!("should be TokenKind::LBRACE");
@@ -95,7 +105,7 @@ impl<'a> Parser<'a> {
             body.push(node);
         }
 
-        return Function { name, body };
+        return Function { name, args, body };
     }
 
     fn stmt(&mut self) -> Node {
@@ -170,12 +180,10 @@ impl<'a> Parser<'a> {
             }
 
             let mut args = Vec::new();
-            if !self.consume(TokenKind::RPAREN) {
+            while !self.consume(TokenKind::RPAREN) {
                 let expr = self.expr();
-                if !self.consume(TokenKind::RPAREN) {
-                    panic!("should be TokenKind::RPAREN")
-                }
                 args.push(expr);
+                self.consume(TokenKind::COMMA);
             }
 
             return Node::CALL(identifier, args);

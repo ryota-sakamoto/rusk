@@ -13,26 +13,51 @@ pub fn generate(program: &Program) {
 }
 
 fn generate_function(function: &Function) {
-    println!("define i32 @{}() {{", function.name);
-
-    let mut generator = GenerateFunction::new();
-    for node in function.body.iter() {
-        generator.generate_node(node);
-    }
-    println!("}}");
+    let generator = GenerateFunction::new(function);
+    generator.generate();
 }
 
 struct GenerateFunction<'a> {
+    function: &'a Function,
     index: u64,
     map: HashMap<&'a str, u64>,
 }
 
 impl<'a> GenerateFunction<'a> {
-    fn new() -> Self {
+    fn new(function: &'a Function) -> Self {
         Self {
-            index: 1,
+            function,
+            index: 0,
             map: HashMap::new(),
         }
+    }
+
+    fn generate(mut self) {
+        let mut regs = Vec::new();
+        for arg in self.function.args.iter() {
+            let reg = self.new_reg();
+            self.map.insert(arg, reg);
+            regs.push(reg);
+        }
+
+        if regs.len() > 0 {
+            println!(
+                "define i32 @{}({}) {{",
+                self.function.name,
+                regs.iter()
+                    .map(|reg| format!("i32 %{}", reg))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+            );
+        } else {
+            println!("define i32 @{}() {{", self.function.name);
+        }
+        println!("entry:");
+
+        for node in self.function.body.iter() {
+            self.generate_node(node);
+        }
+        println!("}}");
     }
 
     fn new_reg(&mut self) -> u64 {
@@ -105,10 +130,24 @@ impl<'a> GenerateFunction<'a> {
 
                 let reg = self.new_reg();
                 if call_args.len() > 0 {
-                    println!(
-                        "  %{} = call i32 @{}(ptr @.str, i32 %{})",
-                        reg, name, call_args[0]
-                    );
+                    // TODO: fix after implement string
+                    if name == "printf" {
+                        println!(
+                            "  %{} = call i32 @{}(ptr @.str, i32 %{})",
+                            reg, name, call_args[0]
+                        );
+                    } else {
+                        println!(
+                            "  %{} = call i32 @{}({})",
+                            reg,
+                            name,
+                            call_args
+                                .iter()
+                                .map(|reg| format!("i32 %{}", reg))
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        );
+                    }
                 } else {
                     println!("  %{} = call i32 @{}()", reg, name);
                 }

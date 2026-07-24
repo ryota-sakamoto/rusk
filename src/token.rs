@@ -13,6 +13,7 @@ pub enum TokenKind {
     RET,
     LET,
     EQ,
+    COMMA,
     IDENTIFIER(String),
     NUM(i32),
 }
@@ -60,6 +61,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }),
             '=' => tokens.push(Token {
                 kind: TokenKind::EQ,
+            }),
+            ',' => tokens.push(Token {
+                kind: TokenKind::COMMA,
             }),
             n if n.is_numeric() => {
                 let mut num = 0;
