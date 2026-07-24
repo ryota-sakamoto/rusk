@@ -12,7 +12,7 @@ pub enum TokenKind {
     SEMI,
     RET,
     LET,
-    EQ,
+    ASSIGN,
     COMMA,
     IDENTIFIER(String),
     NUM(i32),
@@ -60,7 +60,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 kind: TokenKind::SEMI,
             }),
             '=' => tokens.push(Token {
-                kind: TokenKind::EQ,
+                kind: TokenKind::ASSIGN,
             }),
             ',' => tokens.push(Token {
                 kind: TokenKind::COMMA,

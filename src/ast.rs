@@ -112,8 +112,8 @@ impl<'a> Parser<'a> {
         let return_node = self.consume(TokenKind::RET);
         let let_name = if self.consume(TokenKind::LET) {
             let identifier = self.identifier().expect("should be identifier");
-            if !self.consume(TokenKind::EQ) {
-                panic!("should be TokenKind::EQ");
+            if !self.consume(TokenKind::ASSIGN) {
+                panic!("should be TokenKind::ASSIGN");
             }
 
             Some(identifier)
