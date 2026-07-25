@@ -26,6 +26,7 @@ pub enum Node {
     RLET(String),
     CALL(String, Vec<Node>),
     EQ(Box<Node>, Box<Node>),
+    IF(Box<Node>, Vec<Node>),
 }
 
 pub struct Parser<'a> {
@@ -110,6 +111,21 @@ impl<'a> Parser<'a> {
     }
 
     fn stmt(&mut self) -> Node {
+        if self.consume(TokenKind::IF) {
+            let node = self.expr();
+            if !self.consume(TokenKind::LBRACE) {
+                panic!("should be TokenKind::LBRACE");
+            }
+
+            let mut body = Vec::new();
+            while !self.consume(TokenKind::RBRACE) {
+                let node = self.stmt();
+                body.push(node);
+            }
+
+            return Node::IF(Box::new(node), body);
+        }
+
         let return_node = self.consume(TokenKind::RET);
         let let_name = if self.consume(TokenKind::LET) {
             let identifier = self.identifier().expect("should be identifier");

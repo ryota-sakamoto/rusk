@@ -20,6 +20,7 @@ fn generate_function(function: &Function) {
 struct GenerateFunction<'a> {
     function: &'a Function,
     index: u64,
+    label: u64,
     map: HashMap<&'a str, u64>,
 }
 
@@ -28,6 +29,7 @@ impl<'a> GenerateFunction<'a> {
         Self {
             function,
             index: 0,
+            label: 0,
             map: HashMap::new(),
         }
     }
@@ -45,7 +47,7 @@ impl<'a> GenerateFunction<'a> {
                 "define i32 @{}({}) {{",
                 self.function.name,
                 regs.iter()
-                    .map(|reg| format!("i32 %{}", reg))
+                    .map(|reg| format!("i32 %r{}", reg))
                     .collect::<Vec<String>>()
                     .join(", "),
             );
@@ -67,6 +69,13 @@ impl<'a> GenerateFunction<'a> {
         return current;
     }
 
+    fn new_label(&mut self) -> u64 {
+        let current = self.label;
+        self.label += 1;
+
+        return current;
+    }
+
     fn generate_node(&mut self, node: &'a Node) -> u64 {
         match node {
             Node::ADD(l, r) => {
@@ -74,7 +83,7 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %{} = add i32 %{}, %{}", reg, ln, rn);
+                println!("  %r{} = add i32 %r{}, %r{}", reg, ln, rn);
 
                 return reg;
             }
@@ -83,7 +92,7 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %{} = sub i32 %{}, %{}", reg, ln, rn);
+                println!("  %r{} = sub i32 %r{}, %r{}", reg, ln, rn);
 
                 return reg;
             }
@@ -92,7 +101,7 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %{} = mul i32 %{}, %{}", reg, ln, rn);
+                println!("  %r{} = mul i32 %r{}, %r{}", reg, ln, rn);
 
                 return reg;
             }
@@ -101,23 +110,23 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %{} = sdiv i32 %{}, %{}", reg, ln, rn);
+                println!("  %r{} = sdiv i32 %r{}, %r{}", reg, ln, rn);
 
                 return reg;
             }
             Node::NUM(n) => {
                 let reg = self.new_reg();
-                println!("  %{} = alloca i32", reg);
-                println!("  store i32 {}, ptr %{}", n, reg);
+                println!("  %r{} = alloca i32", reg);
+                println!("  store i32 {}, ptr %r{}", n, reg);
 
                 let reg2 = self.new_reg();
-                println!("  %{} = load i32, ptr %{}", reg2, reg);
+                println!("  %r{} = load i32, ptr %r{}", reg2, reg);
 
                 return reg2;
             }
             Node::RET(n) => {
                 let ret = self.generate_node(n);
-                println!("  ret i32 %{}", ret);
+                println!("  ret i32 %r{}", ret);
                 return 0;
             }
             Node::CALL(name, args) => {
@@ -133,23 +142,23 @@ impl<'a> GenerateFunction<'a> {
                     // TODO: fix after implement string
                     if name == "printf" {
                         println!(
-                            "  %{} = call i32 @{}(ptr @.str, i32 %{})",
+                            "  %r{} = call i32 @{}(ptr @.str, i32 %r{})",
                             reg, name, call_args[0]
                         );
                     } else {
                         println!(
-                            "  %{} = call i32 @{}({})",
+                            "  %r{} = call i32 @{}({})",
                             reg,
                             name,
                             call_args
                                 .iter()
-                                .map(|reg| format!("i32 %{}", reg))
+                                .map(|reg| format!("i32 %r{}", reg))
                                 .collect::<Vec<String>>()
                                 .join(", ")
                         );
                     }
                 } else {
-                    println!("  %{} = call i32 @{}()", reg, name);
+                    println!("  %r{} = call i32 @{}()", reg, name);
                 }
 
                 return reg;
@@ -169,9 +178,23 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %{} = icmp eq i32 %{}, %{}", reg, ln, rn);
+                println!("  %r{} = icmp eq i32 %r{}, %r{}", reg, ln, rn);
 
                 return reg;
+            }
+            Node::IF(l, r) => {
+                let ln = self.generate_node(l);
+                let label = self.new_label();
+                println!("  br i1 %r{}, label %if_{label}, label %else_{label}", ln);
+                println!("  if_{label}:");
+                for f in r {
+                    self.generate_node(f);
+                }
+                println!("  br label %else_{label}");
+
+                println!("  else_{label}:");
+
+                return 0;
             }
         }
     }

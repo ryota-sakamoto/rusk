@@ -15,6 +15,8 @@ pub enum TokenKind {
     ASSIGN,
     COMMA,
     EQ,
+    IF,
+    ELSE,
     IDENTIFIER(String),
     NUM(i32),
 }
@@ -101,6 +103,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     }),
                     "let" => tokens.push(Token {
                         kind: TokenKind::LET,
+                    }),
+                    "if" => tokens.push(Token {
+                        kind: TokenKind::IF,
+                    }),
+                    "else" => tokens.push(Token {
+                        kind: TokenKind::ELSE,
                     }),
                     _ => tokens.push(Token {
                         kind: TokenKind::IDENTIFIER(identifier),
