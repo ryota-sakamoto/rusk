@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::{env, fs, process::Command};
+    use std::{collections::linked_list, env, fs, path::Path, process::Command};
 
     fn run_and_assert(input: &str, expected: i32) {
         let dir = env::temp_dir();
@@ -42,32 +42,26 @@ mod tests {
 
     #[test]
     fn test_return_numbers() {
-        run_and_assert("fn main() { printf(0); return 0; }", 0);
-        run_and_assert("fn main() { printf(42); return 0; }", 42);
-        run_and_assert("fn main() { printf(12+5-1); return 0; }", 16);
-        run_and_assert("fn main() { printf(33*4+8); return 0; }", 140);
-        run_and_assert("fn main() { printf(28+4*8-12/2); return 0; }", 54);
-        run_and_assert("fn main() { printf(12*(4+3)-3); return 0; }", 81);
-        run_and_assert("fn main() { printf(22*-5+49); return 0; }", -61);
-        run_and_assert(
-            "fn f() { return 100; } fn main() { printf(f()); return 0; }",
-            100,
-        );
-        run_and_assert(
-            "fn f() { let a = 5; let b = 4; return a * (b + 3); } fn main() { printf(f() - 12); return 0; }",
-            23,
-        );
-        run_and_assert(
-            "fn f(a, b, c) { let d = (a - b) * c; return d * 4; } fn main() { printf(f(7, 3, 4)); return 0; }",
-            64,
-        );
-        run_and_assert(
-            "fn f(n) { if (n == 1) { return 1; } if (n == 2) { return 1; } return f(n - 1) + f(n - 2); }  fn main() { printf(f(10)); return 0; }",
-            55,
-        );
-        run_and_assert(
-            "fn f(n) { if (n == 1) { return 3; } else { return 5; } return 0; } fn main() { printf(f(2)); return 0; }",
-            5,
-        );
+        let cases_dir = Path::new("tests/cases");
+        let mut entries: Vec<_> = fs::read_dir(cases_dir)
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
+        entries.sort_by_key(|dir| dir.path());
+
+        for entry in entries {
+            let content = fs::read_to_string(entry.path()).unwrap();
+
+            let mut lines = content.lines();
+            let first_line = lines.next().unwrap();
+            let expected: i32 = first_line
+                .strip_prefix("// EXPECTED: ")
+                .unwrap()
+                .parse()
+                .unwrap();
+
+            println!("run {:?}", entry.path());
+            run_and_assert(&lines.collect::<Vec<&str>>().join("\n"), expected);
+        }
     }
 }
