@@ -34,6 +34,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         if c.is_whitespace() {
             continue;
         }
+
+        if c == '/' && chars.next_if_eq(&'/').is_some() {
+            while chars.next_if(|c2| *c2 != '\n').is_some() {}
+            continue;
+        }
+
         match c {
             '+' => tokens.push(Token {
                 kind: TokenKind::PLUS,

@@ -52,8 +52,7 @@ mod tests {
         for entry in entries {
             let content = fs::read_to_string(entry.path()).unwrap();
 
-            let mut lines = content.lines();
-            let first_line = lines.next().unwrap();
+            let first_line = content.lines().next().unwrap();
             let expected: i32 = first_line
                 .strip_prefix("// EXPECTED: ")
                 .unwrap()
@@ -61,7 +60,7 @@ mod tests {
                 .unwrap();
 
             println!("run {:?}", entry.path());
-            run_and_assert(&lines.collect::<Vec<&str>>().join("\n"), expected);
+            run_and_assert(&content, expected);
         }
     }
 }
