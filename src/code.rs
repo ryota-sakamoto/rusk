@@ -182,15 +182,30 @@ impl<'a> GenerateFunction<'a> {
 
                 return reg;
             }
-            Node::IF(l, r) => {
+            Node::IF(l, body, ebody) => {
                 let ln = self.generate_node(l);
                 let label = self.new_label();
-                println!("  br i1 %r{}, label %if_{label}, label %else_{label}", ln);
+
+                let else_label = if ebody.len() > 0 {
+                    format!("elseif_{label}")
+                } else {
+                    format!("else_{label}")
+                };
+
+                println!("  br i1 %r{}, label %if_{label}, label %{else_label}", ln);
+
                 println!("  if_{label}:");
-                for f in r {
+                for f in body {
                     self.generate_node(f);
                 }
                 println!("  br label %else_{label}");
+
+                if ebody.len() > 0 {
+                    println!("  elseif_{label}:");
+                    for f in ebody {
+                        self.generate_node(f);
+                    }
+                }
 
                 println!("  else_{label}:");
 

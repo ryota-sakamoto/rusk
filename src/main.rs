@@ -85,5 +85,9 @@ mod tests {
             "fn f(n) { if (n == 1) { return 1; } if (n == 2) { return 1; } return f(n - 1) + f(n - 2); }  fn main() { printf(f(10)); return 0; }",
             55,
         );
+        run_and_assert(
+            "fn f(n) { if (n == 1) { return 3; } else { return 5; } return 0; } fn main() { printf(f(2)); return 0; }",
+            5,
+        );
     }
 }
