@@ -164,6 +164,15 @@ impl<'a> GenerateFunction<'a> {
                 let r = self.map.get(name.as_str()).unwrap();
                 return *r;
             }
+            Node::EQ(l, r) => {
+                let ln = self.generate_node(l);
+                let rn = self.generate_node(r);
+
+                let reg = self.new_reg();
+                println!("  %{} = icmp eq i32 %{}, %{}", reg, ln, rn);
+
+                return reg;
+            }
         }
     }
 }

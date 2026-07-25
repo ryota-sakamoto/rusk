@@ -25,6 +25,7 @@ pub enum Node {
     LET(String, Box<Node>),
     RLET(String),
     CALL(String, Vec<Node>),
+    EQ(Box<Node>, Box<Node>),
 }
 
 pub struct Parser<'a> {
@@ -136,6 +137,20 @@ impl<'a> Parser<'a> {
     }
 
     fn expr(&mut self) -> Node {
+        return self.equality();
+    }
+
+    fn equality(&mut self) -> Node {
+        let mut node = self.add();
+
+        if self.consume(TokenKind::EQ) {
+            node = Node::EQ(Box::new(node), Box::new(self.add()));
+        }
+
+        return node;
+    }
+
+    fn add(&mut self) -> Node {
         let mut node = self.mul();
 
         loop {
