@@ -1,0 +1,73 @@
+#[cfg(test)]
+mod tests {
+    use std::{env, fs, process::Command};
+
+    fn run_and_assert(input: &str, expected: i32) {
+        let dir = env::temp_dir();
+
+        let mut ll_path = dir.clone();
+        ll_path.push("test.ll");
+
+        let output = Command::new("cargo")
+            .args(&["run", "--quiet", "--", input])
+            .output()
+            .expect("Failed to execute compiler");
+
+        assert!(output.status.success());
+
+        let ll_code = String::from_utf8(output.stdout).unwrap();
+        fs::write(&ll_path, ll_code).expect("Failed to write .ll file");
+
+        let mut exe_path = dir.clone();
+        exe_path.push("test.out");
+
+        let clang_status = Command::new("clang")
+            .arg(&ll_path)
+            .arg("-o")
+            .arg(&exe_path)
+            .status()
+            .expect("Failed to run clang");
+        assert!(clang_status.success());
+
+        let run_output = Command::new(&exe_path)
+            .output()
+            .expect("Failed to run compiled binary");
+
+        assert!(run_output.status.success());
+
+        let run_stdout = String::from_utf8(run_output.stdout).unwrap();
+        let a: i32 = run_stdout.parse().unwrap();
+        assert_eq!(a, expected);
+    }
+
+    #[test]
+    fn test_return_numbers() {
+        run_and_assert("fn main() { printf(0); return 0; }", 0);
+        run_and_assert("fn main() { printf(42); return 0; }", 42);
+        run_and_assert("fn main() { printf(12+5-1); return 0; }", 16);
+        run_and_assert("fn main() { printf(33*4+8); return 0; }", 140);
+        run_and_assert("fn main() { printf(28+4*8-12/2); return 0; }", 54);
+        run_and_assert("fn main() { printf(12*(4+3)-3); return 0; }", 81);
+        run_and_assert("fn main() { printf(22*-5+49); return 0; }", -61);
+        run_and_assert(
+            "fn f() { return 100; } fn main() { printf(f()); return 0; }",
+            100,
+        );
+        run_and_assert(
+            "fn f() { let a = 5; let b = 4; return a * (b + 3); } fn main() { printf(f() - 12); return 0; }",
+            23,
+        );
+        run_and_assert(
+            "fn f(a, b, c) { let d = (a - b) * c; return d * 4; } fn main() { printf(f(7, 3, 4)); return 0; }",
+            64,
+        );
+        run_and_assert(
+            "fn f(n) { if (n == 1) { return 1; } if (n == 2) { return 1; } return f(n - 1) + f(n - 2); }  fn main() { printf(f(10)); return 0; }",
+            55,
+        );
+        run_and_assert(
+            "fn f(n) { if (n == 1) { return 3; } else { return 5; } return 0; } fn main() { printf(f(2)); return 0; }",
+            5,
+        );
+    }
+}
