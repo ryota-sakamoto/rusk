@@ -115,22 +115,15 @@ impl<'a> GenerateFunction<'a> {
         let mut regs = Vec::new();
         for arg in self.function.args.iter() {
             let reg = self.new_reg();
-            self.map.insert(arg, format!("%r{reg}"));
-            regs.push(reg);
+            self.map.insert(&arg.name, format!("%r{reg}"));
+            regs.push(format!("{} %r{reg}", arg.ty));
         }
 
-        if regs.len() > 0 {
-            println!(
-                "define i32 @{}({}) {{",
-                self.function.name,
-                regs.iter()
-                    .map(|reg| format!("i32 %r{}", reg))
-                    .collect::<Vec<String>>()
-                    .join(", "),
-            );
-        } else {
-            println!("define i32 @{}() {{", self.function.name);
-        }
+        println!(
+            "define i32 @{}({}) {{",
+            self.function.name,
+            regs.into_iter().collect::<Vec<String>>().join(", "),
+        );
         println!("entry:");
 
         for node in self.function.body.iter() {

@@ -10,6 +10,7 @@ pub enum TokenKind {
     RBRACE,
     FN,
     SEMI,
+    COLON,
     RET,
     LET,
     ASSIGN,
@@ -68,6 +69,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }),
             ';' => tokens.push(Token {
                 kind: TokenKind::SEMI,
+            }),
+            ':' => tokens.push(Token {
+                kind: TokenKind::COLON,
             }),
             '=' => {
                 if chars.next_if(|c2| *c2 == '=').is_some() {

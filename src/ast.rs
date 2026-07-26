@@ -10,8 +10,14 @@ pub struct Program {
 #[derive(PartialEq, Eq, Debug)]
 pub struct Function {
     pub name: String,
-    pub args: Vec<String>,
+    pub args: Vec<Arg>,
     pub body: Vec<Node>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct Arg {
+    pub name: String,
+    pub ty: String,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -92,9 +98,16 @@ impl<'a> Parser<'a> {
 
         let mut args = Vec::new();
 
-        while let Some(identifier) = self.identifier() {
-            args.push(identifier);
+        while let Some(name) = self.identifier() {
+            if !self.consume(TokenKind::COLON) {
+                panic!("should be TokenKind::COLON");
+            }
+
+            let ty = self.identifier().expect("should be identifier");
+
             self.consume(TokenKind::COMMA);
+
+            args.push(Arg { name, ty });
         }
 
         if !self.consume(TokenKind::RPAREN) {

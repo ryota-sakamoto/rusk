@@ -1,5 +1,5 @@
 // EXPECTED: 55
-fn f(n) {
+fn f(n: i32) {
     if (n == 1) {
         return 1;
     }
