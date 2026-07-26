@@ -5,6 +5,6 @@ fn f() {
     return a * (b + 3);
 }
 fn main() {
-    printf(f() - 12);
+    printf("%d", f() - 12);
     return 0;
 }

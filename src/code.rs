@@ -1,36 +1,113 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::ast::{Function, Node, Program};
 
 pub fn generate(program: &Program) {
-    println!(r#"@.str = private unnamed_addr constant [3 x i8] c"%d\00""#);
-    println!("declare i32 @printf(ptr, ...)");
-    println!();
+    let mut generator = Generator::new(program);
+    generator.parse();
+    generator.generate();
+}
 
-    for f in program.functions.iter() {
-        generate_function(f);
+struct Generator<'a> {
+    string_map: HashMap<&'a str, String>,
+    string_index: u64,
+    program: &'a Program,
+}
+
+impl<'a> Generator<'a> {
+    fn new(program: &'a Program) -> Self {
+        Self {
+            string_map: HashMap::new(),
+            string_index: 0,
+            program,
+        }
+    }
+
+    fn parse(&mut self) {
+        for f in &self.program.functions {
+            for node in &f.body {
+                self.parse_node(node);
+            }
+        }
+    }
+
+    fn parse_node(&mut self, node: &'a Node) {
+        match node {
+            Node::CALL(_l, args) => {
+                for v in args {
+                    self.parse_node(v);
+                }
+            }
+            Node::STRING(s) => {
+                if !self.string_map.get(s.as_str()).is_some() {
+                    self.string_map
+                        .insert(s, format!("@.str.{}", self.string_index));
+                    self.string_index += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn generate(&mut self) {
+        for (k, v) in &self.string_map {
+            println!(
+                r#"{} = private unnamed_addr constant [{} x i8] c"{}\00""#,
+                v,
+                k.len() + 1,
+                k,
+            );
+        }
+
+        println!("declare i32 @printf(ptr, ...)");
+
+        for f in self.program.functions.iter() {
+            println!();
+            let generator = GenerateFunction::new(f, &self.string_map);
+            generator.generate();
+        }
     }
 }
 
-fn generate_function(function: &Function) {
-    let generator = GenerateFunction::new(function);
-    generator.generate();
+pub enum Type {
+    Int,
+    Ptr,
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Type::Int => "i32",
+                Type::Ptr => "ptr",
+            }
+        )
+    }
+}
+
+struct Value {
+    name: String,
+    ty: Type,
 }
 
 struct GenerateFunction<'a> {
     function: &'a Function,
     index: u64,
     label: u64,
-    map: HashMap<&'a str, u64>,
+    map: HashMap<&'a str, String>,
+    string_map: &'a HashMap<&'a str, String>,
 }
 
 impl<'a> GenerateFunction<'a> {
-    fn new(function: &'a Function) -> Self {
+    fn new(function: &'a Function, string_map: &'a HashMap<&'a str, String>) -> Self {
         Self {
             function,
             index: 0,
             label: 0,
             map: HashMap::new(),
+            string_map,
         }
     }
 
@@ -38,7 +115,7 @@ impl<'a> GenerateFunction<'a> {
         let mut regs = Vec::new();
         for arg in self.function.args.iter() {
             let reg = self.new_reg();
-            self.map.insert(arg, reg);
+            self.map.insert(arg, format!("%r{reg}"));
             regs.push(reg);
         }
 
@@ -76,43 +153,55 @@ impl<'a> GenerateFunction<'a> {
         return current;
     }
 
-    fn generate_node(&mut self, node: &'a Node) -> u64 {
+    fn generate_node(&mut self, node: &'a Node) -> Value {
         match node {
             Node::ADD(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = add i32 %r{}, %r{}", reg, ln, rn);
+                println!("  %r{} = add i32 {}, {}", reg, ln.name, rn.name);
 
-                return reg;
+                return Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Int,
+                };
             }
             Node::SUB(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = sub i32 %r{}, %r{}", reg, ln, rn);
+                println!("  %r{} = sub i32 {}, {}", reg, ln.name, rn.name);
 
-                return reg;
+                return Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Int,
+                };
             }
             Node::MUL(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = mul i32 %r{}, %r{}", reg, ln, rn);
+                println!("  %r{} = mul i32 {}, {}", reg, ln.name, rn.name);
 
-                return reg;
+                return Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Int,
+                };
             }
             Node::DIV(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = sdiv i32 %r{}, %r{}", reg, ln, rn);
+                println!("  %r{} = sdiv i32 {}, {}", reg, ln.name, rn.name);
 
-                return reg;
+                return Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Int,
+                };
             }
             Node::NUM(n) => {
                 let reg = self.new_reg();
@@ -122,12 +211,25 @@ impl<'a> GenerateFunction<'a> {
                 let reg2 = self.new_reg();
                 println!("  %r{} = load i32, ptr %r{}", reg2, reg);
 
-                return reg2;
+                return Value {
+                    name: format!("%r{reg2}"),
+                    ty: Type::Int,
+                };
+            }
+            Node::STRING(s) => {
+                let name = self.string_map.get(s.as_str()).unwrap();
+                return Value {
+                    name: name.clone(),
+                    ty: Type::Ptr,
+                };
             }
             Node::RET(n) => {
                 let ret = self.generate_node(n);
-                println!("  ret i32 %r{}", ret);
-                return 0;
+                println!("  ret i32 {}", ret.name);
+                return Value {
+                    name: format!(""),
+                    ty: Type::Int,
+                };
             }
             Node::CALL(name, args) => {
                 let mut call_args = Vec::new();
@@ -139,48 +241,49 @@ impl<'a> GenerateFunction<'a> {
 
                 let reg = self.new_reg();
                 if call_args.len() > 0 {
-                    // TODO: fix after implement string
-                    if name == "printf" {
-                        println!(
-                            "  %r{} = call i32 @{}(ptr @.str, i32 %r{})",
-                            reg, name, call_args[0]
-                        );
-                    } else {
-                        println!(
-                            "  %r{} = call i32 @{}({})",
-                            reg,
-                            name,
-                            call_args
-                                .iter()
-                                .map(|reg| format!("i32 %r{}", reg))
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        );
-                    }
+                    println!(
+                        "  %r{} = call i32 @{}({})",
+                        reg,
+                        name,
+                        call_args
+                            .iter()
+                            .map(|reg| format!("{} {}", reg.ty, reg.name))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    );
                 } else {
                     println!("  %r{} = call i32 @{}()", reg, name);
                 }
 
-                return reg;
+                return Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Int,
+                };
             }
             Node::LET(name, right) => {
                 let r = self.generate_node(right);
-                self.map.insert(name, r);
+                self.map.insert(name, r.name.clone());
 
                 return r;
             }
             Node::RLET(name) => {
                 let r = self.map.get(name.as_str()).unwrap();
-                return *r;
+                return Value {
+                    name: r.clone(),
+                    ty: Type::Int,
+                };
             }
             Node::EQ(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = icmp eq i32 %r{}, %r{}", reg, ln, rn);
+                println!("  %r{} = icmp eq i32 {}, {}", reg, ln.name, rn.name);
 
-                return reg;
+                return Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Int,
+                };
             }
             Node::IF(l, body, ebody) => {
                 let ln = self.generate_node(l);
@@ -192,7 +295,10 @@ impl<'a> GenerateFunction<'a> {
                     format!("else_{label}")
                 };
 
-                println!("  br i1 %r{}, label %if_{label}, label %{else_label}", ln);
+                println!(
+                    "  br i1 {}, label %if_{label}, label %{else_label}",
+                    ln.name
+                );
 
                 println!("  if_{label}:");
                 for f in body {
@@ -209,7 +315,10 @@ impl<'a> GenerateFunction<'a> {
 
                 println!("  else_{label}:");
 
-                return 0;
+                return Value {
+                    name: format!(""),
+                    ty: Type::Int,
+                };
             }
         }
     }

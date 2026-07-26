@@ -9,6 +9,6 @@ fn f(n) {
 }
 
 fn main() {
-    printf(f(2));
+    printf("%d", f(2));
     return 0;
 }

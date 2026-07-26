@@ -21,6 +21,7 @@ pub enum Node {
     MUL(Box<Node>, Box<Node>),
     DIV(Box<Node>, Box<Node>),
     NUM(i32),
+    STRING(String),
     RET(Box<Node>),
     LET(String, Box<Node>),
     RLET(String),
@@ -239,14 +240,18 @@ impl<'a> Parser<'a> {
             return node;
         }
 
-        if let Some(t) = self.current()
-            && let TokenKind::NUM(n) = t.kind
-        {
+        let parsed_node = match self.current().map(|t| &t.kind) {
+            Some(TokenKind::NUM(n)) => Some(Node::NUM(*n)),
+            Some(TokenKind::STRING(s)) => Some(Node::STRING(s.clone())),
+            _ => None,
+        };
+
+        if let Some(node) = parsed_node {
             self.pos += 1;
-            return Node::NUM(n);
+            return node;
         }
 
-        panic!("should be TokenKind::NUM")
+        panic!("should be Token, but {:?}", self.current());
     }
 }
 

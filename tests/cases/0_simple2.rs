@@ -1,5 +1,5 @@
 // EXPECTED: 42
 fn main() {
-    printf(42);
+    printf("%d", 42);
     return 0;
 }

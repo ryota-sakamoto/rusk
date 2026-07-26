@@ -19,6 +19,7 @@ pub enum TokenKind {
     ELSE,
     IDENTIFIER(String),
     NUM(i32),
+    STRING(String),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -82,6 +83,17 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             ',' => tokens.push(Token {
                 kind: TokenKind::COMMA,
             }),
+            '"' => {
+                let mut s = String::new();
+                while let Some(c2) = chars.next_if(|c2| c2 != &'"') {
+                    s.push(c2);
+                }
+                chars.next();
+
+                tokens.push(Token {
+                    kind: TokenKind::STRING(s),
+                });
+            }
             n if n.is_numeric() => {
                 let mut num = 0;
                 num += n.to_digit(10).unwrap();

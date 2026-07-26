@@ -3,6 +3,6 @@ fn f() {
     return 100;
 }
 fn main() {
-    printf(f());
+    printf("%d", f());
     return 0;
 }

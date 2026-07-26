@@ -12,6 +12,6 @@ fn f(n) {
 }
 
 fn main() {
-    printf(f(10));
+    printf("%d", f(10));
     return 0;
 }
