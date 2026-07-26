@@ -1,10 +1,10 @@
 // EXPECTED: 55
 fn f(n: i32) -> i32 {
-    if (n == 1) {
+    if n == 1 {
         return 1;
     }
 
-    if (n == 2) {
+    if n == 2 {
         return 1;
     }
 
@@ -13,5 +13,4 @@ fn f(n: i32) -> i32 {
 
 fn main() {
     printf("%d", f(10));
-    return 0;
 }
