@@ -33,6 +33,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();
 
+    let mut push_token = |kind| tokens.push(Token { kind });
+
     while let Some(c) = chars.next() {
         if c.is_whitespace() {
             continue;
@@ -44,68 +46,37 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         }
 
         match c {
-            '+' => tokens.push(Token {
-                kind: TokenKind::Plus,
-            }),
+            '+' => push_token(TokenKind::Plus),
             '-' => {
                 if chars.next_if_eq(&'>').is_some() {
-                    tokens.push(Token {
-                        kind: TokenKind::Arrow,
-                    });
+                    push_token(TokenKind::Arrow);
                 } else {
-                    tokens.push(Token {
-                        kind: TokenKind::Minus,
-                    })
+                    push_token(TokenKind::Minus);
                 }
             }
-            '*' => tokens.push(Token {
-                kind: TokenKind::Mul,
-            }),
-            '/' => tokens.push(Token {
-                kind: TokenKind::Div,
-            }),
-            '(' => tokens.push(Token {
-                kind: TokenKind::LParen,
-            }),
-            ')' => tokens.push(Token {
-                kind: TokenKind::RParen,
-            }),
-            '{' => tokens.push(Token {
-                kind: TokenKind::LBrace,
-            }),
-            '}' => tokens.push(Token {
-                kind: TokenKind::RBrace,
-            }),
-            ';' => tokens.push(Token {
-                kind: TokenKind::Semi,
-            }),
-            ':' => tokens.push(Token {
-                kind: TokenKind::Colon,
-            }),
+            '*' => push_token(TokenKind::Mul),
+            '/' => push_token(TokenKind::Div),
+            '(' => push_token(TokenKind::LParen),
+            ')' => push_token(TokenKind::RParen),
+            '{' => push_token(TokenKind::LBrace),
+            '}' => push_token(TokenKind::RBrace),
+            ';' => push_token(TokenKind::Semi),
+            ':' => push_token(TokenKind::Colon),
             '=' => {
                 if chars.next_if(|c2| *c2 == '=').is_some() {
-                    tokens.push(Token {
-                        kind: TokenKind::Eq,
-                    });
+                    push_token(TokenKind::Eq);
                 } else {
-                    tokens.push(Token {
-                        kind: TokenKind::Assign,
-                    })
+                    push_token(TokenKind::Assign);
                 }
             }
-            ',' => tokens.push(Token {
-                kind: TokenKind::Comma,
-            }),
+            ',' => push_token(TokenKind::Comma),
             '"' => {
                 let mut s = String::new();
                 while let Some(c2) = chars.next_if(|c2| c2 != &'"') {
                     s.push(c2);
                 }
                 chars.next();
-
-                tokens.push(Token {
-                    kind: TokenKind::String(s),
-                });
+                push_token(TokenKind::String(s));
             }
             n if n.is_numeric() => {
                 let mut num = 0;
@@ -114,9 +85,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 while let Some(n2) = chars.next_if(|n2| n2.is_numeric()) {
                     num = num * 10 + n2.to_digit(10).unwrap();
                 }
-                tokens.push(Token {
-                    kind: TokenKind::Num(num as i32),
-                })
+                push_token(TokenKind::Num(num as i32));
             }
             n if n.is_alphanumeric() => {
                 let mut identifier = String::new();
@@ -126,24 +95,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
 
                 match identifier.as_str() {
-                    "fn" => tokens.push(Token {
-                        kind: TokenKind::Fn,
-                    }),
-                    "return" => tokens.push(Token {
-                        kind: TokenKind::Ret,
-                    }),
-                    "let" => tokens.push(Token {
-                        kind: TokenKind::Let,
-                    }),
-                    "if" => tokens.push(Token {
-                        kind: TokenKind::If,
-                    }),
-                    "else" => tokens.push(Token {
-                        kind: TokenKind::Else,
-                    }),
-                    _ => tokens.push(Token {
-                        kind: TokenKind::Identifier(identifier),
-                    }),
+                    "fn" => push_token(TokenKind::Fn),
+                    "return" => push_token(TokenKind::Ret),
+                    "let" => push_token(TokenKind::Let),
+                    "if" => push_token(TokenKind::If),
+                    "else" => push_token(TokenKind::Else),
+                    _ => push_token(TokenKind::Identifier(identifier)),
                 }
             }
             _ => panic!("not allowed: {}", c),
