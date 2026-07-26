@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::{collections::linked_list, env, fs, path::Path, process::Command};
+    use std::{env, fs, path::Path, process::Command};
 
     fn run_and_assert(input: &str, expected: i32) {
         let dir = env::temp_dir();
