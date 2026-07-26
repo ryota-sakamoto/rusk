@@ -23,18 +23,18 @@ pub struct Arg {
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Node {
-    ADD(Box<Node>, Box<Node>),
-    SUB(Box<Node>, Box<Node>),
-    MUL(Box<Node>, Box<Node>),
-    DIV(Box<Node>, Box<Node>),
-    NUM(i32),
-    STRING(String),
-    RET(Box<Node>),
-    LET(String, Box<Node>),
-    RLET(String),
-    CALL(String, Vec<Node>),
-    EQ(Box<Node>, Box<Node>),
-    IF(Box<Node>, Vec<Node>, Vec<Node>),
+    Add(Box<Node>, Box<Node>),
+    Sub(Box<Node>, Box<Node>),
+    Mul(Box<Node>, Box<Node>),
+    Div(Box<Node>, Box<Node>),
+    Num(i32),
+    String(String),
+    Ret(Box<Node>),
+    Let(String, Box<Node>),
+    RLet(String),
+    Call(String, Vec<Node>),
+    Eq(Box<Node>, Box<Node>),
+    If(Box<Node>, Vec<Node>, Vec<Node>),
 }
 
 pub struct Parser<'a> {
@@ -59,12 +59,12 @@ impl<'a> Parser<'a> {
             return true;
         }
 
-        return false;
+        false
     }
 
     fn identifier(&mut self) -> Option<String> {
         let result = if let Some(Token {
-            kind: TokenKind::IDENTIFIER(n),
+            kind: TokenKind::Identifier(n),
         }) = self.current()
         {
             Some(n.to_owned())
@@ -75,100 +75,100 @@ impl<'a> Parser<'a> {
             self.pos += 1;
         }
 
-        return result;
+        result
     }
 
     pub fn program(&mut self) -> Program {
         let mut functions = Vec::new();
 
-        while self.consume(TokenKind::FN) {
+        while self.consume(TokenKind::Fn) {
             let f = self.function();
             functions.push(f);
         }
 
-        return Program { functions };
+        Program { functions }
     }
 
     fn function(&mut self) -> Function {
         let mut body = Vec::new();
 
         let name = self.identifier().expect("should be identifier");
-        if !self.consume(TokenKind::LPAREN) {
+        if !self.consume(TokenKind::LParen) {
             panic!("should be TokenKind::LPAREN");
         }
 
         let mut args = Vec::new();
 
         while let Some(name) = self.identifier() {
-            if !self.consume(TokenKind::COLON) {
+            if !self.consume(TokenKind::Colon) {
                 panic!("should be TokenKind::COLON");
             }
 
             let ty = self.identifier().expect("should be identifier");
 
-            self.consume(TokenKind::COMMA);
+            self.consume(TokenKind::Comma);
 
             args.push(Arg { name, ty });
         }
 
-        if !self.consume(TokenKind::RPAREN) {
+        if !self.consume(TokenKind::RParen) {
             panic!("should be TokenKind::RPAREN");
         }
 
-        let ty = if self.consume(TokenKind::ARROW) {
+        let ty = if self.consume(TokenKind::Arrow) {
             self.identifier().expect("should be identifier")
         } else {
             "void".to_owned()
         };
 
-        if !self.consume(TokenKind::LBRACE) {
+        if !self.consume(TokenKind::LBrace) {
             panic!("should be TokenKind::LBRACE");
         }
 
-        while !self.consume(TokenKind::RBRACE) {
+        while !self.consume(TokenKind::RBrace) {
             let node = self.stmt();
             body.push(node);
         }
 
-        return Function {
+        Function {
             name,
             args,
             body,
             ty,
-        };
+        }
     }
 
     fn stmt(&mut self) -> Node {
-        if self.consume(TokenKind::IF) {
+        if self.consume(TokenKind::If) {
             let node = self.expr();
-            if !self.consume(TokenKind::LBRACE) {
+            if !self.consume(TokenKind::LBrace) {
                 panic!("should be TokenKind::LBRACE");
             }
 
             let mut body = Vec::new();
-            while !self.consume(TokenKind::RBRACE) {
+            while !self.consume(TokenKind::RBrace) {
                 let node = self.stmt();
                 body.push(node);
             }
 
             let mut ebody = Vec::new();
-            if self.consume(TokenKind::ELSE) {
-                if !self.consume(TokenKind::LBRACE) {
+            if self.consume(TokenKind::Else) {
+                if !self.consume(TokenKind::LBrace) {
                     panic!("should be TokenKind::LBRACE");
                 }
-                while !self.consume(TokenKind::RBRACE) {
+                while !self.consume(TokenKind::RBrace) {
                     let node = self.stmt();
                     ebody.push(node);
                 }
             }
 
-            return Node::IF(Box::new(node), body, ebody);
+            return Node::If(Box::new(node), body, ebody);
         }
 
-        let return_node = self.consume(TokenKind::RET);
-        let let_name = if self.consume(TokenKind::LET) {
+        let return_node = self.consume(TokenKind::Ret);
+        let let_name = if self.consume(TokenKind::Let) {
             let identifier = self.identifier().expect("should be identifier");
-            if !self.consume(TokenKind::ASSIGN) {
+            if !self.consume(TokenKind::Assign) {
                 panic!("should be TokenKind::ASSIGN");
             }
 
@@ -178,41 +178,41 @@ impl<'a> Parser<'a> {
         };
 
         let node = self.expr();
-        if !self.consume(TokenKind::SEMI) {
+        if !self.consume(TokenKind::Semi) {
             panic!("should be TokenKind:: SEMI");
         }
 
-        return if return_node {
-            Node::RET(Box::new(node))
+        if return_node {
+            Node::Ret(Box::new(node))
         } else if let Some(name) = let_name {
-            Node::LET(name, Box::new(node))
+            Node::Let(name, Box::new(node))
         } else {
             node
-        };
+        }
     }
 
     fn expr(&mut self) -> Node {
-        return self.equality();
+        self.equality()
     }
 
     fn equality(&mut self) -> Node {
         let mut node = self.add();
 
-        if self.consume(TokenKind::EQ) {
-            node = Node::EQ(Box::new(node), Box::new(self.add()));
+        if self.consume(TokenKind::Eq) {
+            node = Node::Eq(Box::new(node), Box::new(self.add()));
         }
 
-        return node;
+        node
     }
 
     fn add(&mut self) -> Node {
         let mut node = self.mul();
 
         loop {
-            if self.consume(TokenKind::PLUS) {
-                node = Node::ADD(Box::new(node), Box::new(self.mul()));
-            } else if self.consume(TokenKind::MINUS) {
-                node = Node::SUB(Box::new(node), Box::new(self.mul()));
+            if self.consume(TokenKind::Plus) {
+                node = Node::Add(Box::new(node), Box::new(self.mul()));
+            } else if self.consume(TokenKind::Minus) {
+                node = Node::Sub(Box::new(node), Box::new(self.mul()));
             } else {
                 return node;
             }
@@ -223,10 +223,10 @@ impl<'a> Parser<'a> {
         let mut node = self.unary();
 
         loop {
-            if self.consume(TokenKind::MUL) {
-                node = Node::MUL(Box::new(node), Box::new(self.mul()));
-            } else if self.consume(TokenKind::DIV) {
-                node = Node::DIV(Box::new(node), Box::new(self.mul()));
+            if self.consume(TokenKind::Mul) {
+                node = Node::Mul(Box::new(node), Box::new(self.mul()));
+            } else if self.consume(TokenKind::Div) {
+                node = Node::Div(Box::new(node), Box::new(self.mul()));
             } else {
                 return node;
             }
@@ -234,42 +234,42 @@ impl<'a> Parser<'a> {
     }
 
     fn unary(&mut self) -> Node {
-        if self.consume(TokenKind::PLUS) {
+        if self.consume(TokenKind::Plus) {
             // noop
-        } else if self.consume(TokenKind::MINUS) {
-            return Node::SUB(Box::new(Node::NUM(0)), Box::new(self.primary()));
+        } else if self.consume(TokenKind::Minus) {
+            return Node::Sub(Box::new(Node::Num(0)), Box::new(self.primary()));
         }
 
-        return self.primary();
+        self.primary()
     }
 
     fn primary(&mut self) -> Node {
         if let Some(identifier) = self.identifier() {
-            if !self.consume(TokenKind::LPAREN) {
-                return Node::RLET(identifier);
+            if !self.consume(TokenKind::LParen) {
+                return Node::RLet(identifier);
             }
 
             let mut args = Vec::new();
-            while !self.consume(TokenKind::RPAREN) {
+            while !self.consume(TokenKind::RParen) {
                 let expr = self.expr();
                 args.push(expr);
-                self.consume(TokenKind::COMMA);
+                self.consume(TokenKind::Comma);
             }
 
-            return Node::CALL(identifier, args);
+            return Node::Call(identifier, args);
         }
 
-        if self.consume(TokenKind::LPAREN) {
+        if self.consume(TokenKind::LParen) {
             let node = self.expr();
-            if !self.consume(TokenKind::RPAREN) {
+            if !self.consume(TokenKind::RParen) {
                 panic!("should be TokenKind::RPAREN")
             }
             return node;
         }
 
         let parsed_node = match self.current().map(|t| &t.kind) {
-            Some(TokenKind::NUM(n)) => Some(Node::NUM(*n)),
-            Some(TokenKind::STRING(s)) => Some(Node::STRING(s.clone())),
+            Some(TokenKind::Num(n)) => Some(Node::Num(*n)),
+            Some(TokenKind::String(s)) => Some(Node::String(s.clone())),
             _ => None,
         };
 
@@ -293,27 +293,27 @@ mod tests {
     fn expr() {
         let tokens = vec![
             Token {
-                kind: TokenKind::NUM(12),
+                kind: TokenKind::Num(12),
             },
             Token {
-                kind: TokenKind::PLUS,
+                kind: TokenKind::Plus,
             },
             Token {
-                kind: TokenKind::NUM(5),
+                kind: TokenKind::Num(5),
             },
             Token {
-                kind: TokenKind::MINUS,
+                kind: TokenKind::Minus,
             },
             Token {
-                kind: TokenKind::NUM(1),
+                kind: TokenKind::Num(1),
             },
         ];
         let mut parser = Parser::new(&tokens);
         assert_eq!(
             parser.expr(),
-            Node::SUB(
-                Box::new(Node::ADD(Box::new(Node::NUM(12)), Box::new(Node::NUM(5)))),
-                Box::new(Node::NUM(1))
+            Node::Sub(
+                Box::new(Node::Add(Box::new(Node::Num(12)), Box::new(Node::Num(5)))),
+                Box::new(Node::Num(1))
             ),
         );
     }

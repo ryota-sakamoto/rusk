@@ -33,17 +33,15 @@ impl<'a> Generator<'a> {
 
     fn parse_node(&mut self, node: &'a Node) {
         match node {
-            Node::CALL(_l, args) => {
+            Node::Call(_l, args) => {
                 for v in args {
                     self.parse_node(v);
                 }
             }
-            Node::STRING(s) => {
-                if !self.string_map.get(s.as_str()).is_some() {
-                    self.string_map
-                        .insert(s, format!("@.str.{}", self.string_index));
-                    self.string_index += 1;
-                }
+            Node::String(s) if !self.string_map.contains_key(s.as_str()) => {
+                self.string_map
+                    .insert(s, format!("@.str.{}", self.string_index));
+                self.string_index += 1;
             }
             _ => {}
         }
@@ -157,67 +155,67 @@ impl<'a> GenerateFunction<'a> {
         let current = self.index;
         self.index += 1;
 
-        return current;
+        current
     }
 
     fn new_label(&mut self) -> u64 {
         let current = self.label;
         self.label += 1;
 
-        return current;
+        current
     }
 
     fn generate_node(&mut self, node: &'a Node) -> Value {
         match node {
-            Node::ADD(l, r) => {
+            Node::Add(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
                 println!("  %r{} = add i32 {}, {}", reg, ln.name, rn.name);
 
-                return Value {
+                Value {
                     name: format!("%r{reg}"),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::SUB(l, r) => {
+            Node::Sub(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
                 println!("  %r{} = sub i32 {}, {}", reg, ln.name, rn.name);
 
-                return Value {
+                Value {
                     name: format!("%r{reg}"),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::MUL(l, r) => {
+            Node::Mul(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
                 println!("  %r{} = mul i32 {}, {}", reg, ln.name, rn.name);
 
-                return Value {
+                Value {
                     name: format!("%r{reg}"),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::DIV(l, r) => {
+            Node::Div(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
                 println!("  %r{} = sdiv i32 {}, {}", reg, ln.name, rn.name);
 
-                return Value {
+                Value {
                     name: format!("%r{reg}"),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::NUM(n) => {
+            Node::Num(n) => {
                 let reg = self.new_reg();
                 println!("  %r{} = alloca i32", reg);
                 println!("  store i32 {}, ptr %r{}", n, reg);
@@ -225,28 +223,28 @@ impl<'a> GenerateFunction<'a> {
                 let reg2 = self.new_reg();
                 println!("  %r{} = load i32, ptr %r{}", reg2, reg);
 
-                return Value {
+                Value {
                     name: format!("%r{reg2}"),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::STRING(s) => {
+            Node::String(s) => {
                 let name = self.string_map.get(s.as_str()).unwrap();
-                return Value {
+                Value {
                     name: name.clone(),
                     ty: Type::Ptr,
-                };
+                }
             }
-            Node::RET(n) => {
+            Node::Ret(n) => {
                 self.has_return = true;
                 let ret = self.generate_node(n);
                 println!("  ret {} {}", ret.ty, ret.name);
-                return Value {
-                    name: format!(""),
+                Value {
+                    name: String::new(),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::CALL(name, args) => {
+            Node::Call(name, args) => {
                 let mut call_args = Vec::new();
 
                 for arg in args {
@@ -255,7 +253,7 @@ impl<'a> GenerateFunction<'a> {
                 }
 
                 let reg = self.new_reg();
-                if call_args.len() > 0 {
+                if !call_args.is_empty() {
                     println!(
                         "  %r{} = call i32 @{}({})",
                         reg,
@@ -270,41 +268,41 @@ impl<'a> GenerateFunction<'a> {
                     println!("  %r{} = call i32 @{}()", reg, name);
                 }
 
-                return Value {
+                Value {
                     name: format!("%r{reg}"),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::LET(name, right) => {
+            Node::Let(name, right) => {
                 let r = self.generate_node(right);
                 self.map.insert(name, r.name.clone());
 
-                return r;
+                r
             }
-            Node::RLET(name) => {
+            Node::RLet(name) => {
                 let r = self.map.get(name.as_str()).unwrap();
-                return Value {
+                Value {
                     name: r.clone(),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::EQ(l, r) => {
+            Node::Eq(l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
                 println!("  %r{} = icmp eq i32 {}, {}", reg, ln.name, rn.name);
 
-                return Value {
+                Value {
                     name: format!("%r{reg}"),
                     ty: Type::Int,
-                };
+                }
             }
-            Node::IF(l, body, ebody) => {
+            Node::If(l, body, ebody) => {
                 let ln = self.generate_node(l);
                 let label = self.new_label();
 
-                let else_label = if ebody.len() > 0 {
+                let else_label = if !ebody.is_empty() {
                     format!("elseif_{label}")
                 } else {
                     format!("else_{label}")
@@ -321,7 +319,7 @@ impl<'a> GenerateFunction<'a> {
                 }
                 println!("  br label %else_{label}");
 
-                if ebody.len() > 0 {
+                if !ebody.is_empty() {
                     println!("  elseif_{label}:");
                     for f in ebody {
                         self.generate_node(f);
@@ -330,10 +328,10 @@ impl<'a> GenerateFunction<'a> {
 
                 println!("  else_{label}:");
 
-                return Value {
-                    name: format!(""),
+                Value {
+                    name: String::new(),
                     ty: Type::Int,
-                };
+                }
             }
         }
     }

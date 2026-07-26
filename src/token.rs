@@ -1,27 +1,27 @@
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
-    PLUS,
-    MINUS,
-    MUL,
-    DIV,
-    LPAREN,
-    RPAREN,
-    LBRACE,
-    RBRACE,
-    FN,
-    SEMI,
-    COLON,
-    RET,
-    LET,
-    ASSIGN,
-    COMMA,
-    EQ,
-    IF,
-    ELSE,
-    ARROW,
-    IDENTIFIER(String),
-    NUM(i32),
-    STRING(String),
+    Plus,
+    Minus,
+    Mul,
+    Div,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Fn,
+    Semi,
+    Colon,
+    Ret,
+    Let,
+    Assign,
+    Comma,
+    Eq,
+    If,
+    Else,
+    Arrow,
+    Identifier(String),
+    Num(i32),
+    String(String),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -45,56 +45,56 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
         match c {
             '+' => tokens.push(Token {
-                kind: TokenKind::PLUS,
+                kind: TokenKind::Plus,
             }),
             '-' => {
                 if chars.next_if_eq(&'>').is_some() {
                     tokens.push(Token {
-                        kind: TokenKind::ARROW,
+                        kind: TokenKind::Arrow,
                     });
                 } else {
                     tokens.push(Token {
-                        kind: TokenKind::MINUS,
+                        kind: TokenKind::Minus,
                     })
                 }
             }
             '*' => tokens.push(Token {
-                kind: TokenKind::MUL,
+                kind: TokenKind::Mul,
             }),
             '/' => tokens.push(Token {
-                kind: TokenKind::DIV,
+                kind: TokenKind::Div,
             }),
             '(' => tokens.push(Token {
-                kind: TokenKind::LPAREN,
+                kind: TokenKind::LParen,
             }),
             ')' => tokens.push(Token {
-                kind: TokenKind::RPAREN,
+                kind: TokenKind::RParen,
             }),
             '{' => tokens.push(Token {
-                kind: TokenKind::LBRACE,
+                kind: TokenKind::LBrace,
             }),
             '}' => tokens.push(Token {
-                kind: TokenKind::RBRACE,
+                kind: TokenKind::RBrace,
             }),
             ';' => tokens.push(Token {
-                kind: TokenKind::SEMI,
+                kind: TokenKind::Semi,
             }),
             ':' => tokens.push(Token {
-                kind: TokenKind::COLON,
+                kind: TokenKind::Colon,
             }),
             '=' => {
                 if chars.next_if(|c2| *c2 == '=').is_some() {
                     tokens.push(Token {
-                        kind: TokenKind::EQ,
+                        kind: TokenKind::Eq,
                     });
                 } else {
                     tokens.push(Token {
-                        kind: TokenKind::ASSIGN,
+                        kind: TokenKind::Assign,
                     })
                 }
             }
             ',' => tokens.push(Token {
-                kind: TokenKind::COMMA,
+                kind: TokenKind::Comma,
             }),
             '"' => {
                 let mut s = String::new();
@@ -104,7 +104,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 chars.next();
 
                 tokens.push(Token {
-                    kind: TokenKind::STRING(s),
+                    kind: TokenKind::String(s),
                 });
             }
             n if n.is_numeric() => {
@@ -115,7 +115,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     num = num * 10 + n2.to_digit(10).unwrap();
                 }
                 tokens.push(Token {
-                    kind: TokenKind::NUM(num as i32),
+                    kind: TokenKind::Num(num as i32),
                 })
             }
             n if n.is_alphanumeric() => {
@@ -127,22 +127,22 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
                 match identifier.as_str() {
                     "fn" => tokens.push(Token {
-                        kind: TokenKind::FN,
+                        kind: TokenKind::Fn,
                     }),
                     "return" => tokens.push(Token {
-                        kind: TokenKind::RET,
+                        kind: TokenKind::Ret,
                     }),
                     "let" => tokens.push(Token {
-                        kind: TokenKind::LET,
+                        kind: TokenKind::Let,
                     }),
                     "if" => tokens.push(Token {
-                        kind: TokenKind::IF,
+                        kind: TokenKind::If,
                     }),
                     "else" => tokens.push(Token {
-                        kind: TokenKind::ELSE,
+                        kind: TokenKind::Else,
                     }),
                     _ => tokens.push(Token {
-                        kind: TokenKind::IDENTIFIER(identifier),
+                        kind: TokenKind::Identifier(identifier),
                     }),
                 }
             }
@@ -150,7 +150,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         };
     }
 
-    return tokens;
+    tokens
 }
 
 #[cfg(test)]
@@ -163,19 +163,19 @@ mod tests {
             tokenize("12 + 5 - 1"),
             vec![
                 Token {
-                    kind: TokenKind::NUM(12)
+                    kind: TokenKind::Num(12)
                 },
                 Token {
-                    kind: TokenKind::PLUS
+                    kind: TokenKind::Plus
                 },
                 Token {
-                    kind: TokenKind::NUM(5),
+                    kind: TokenKind::Num(5),
                 },
                 Token {
-                    kind: TokenKind::MINUS
+                    kind: TokenKind::Minus
                 },
                 Token {
-                    kind: TokenKind::NUM(1),
+                    kind: TokenKind::Num(1),
                 },
             ]
         );
@@ -187,22 +187,22 @@ mod tests {
             tokenize("fn main() {}"),
             vec![
                 Token {
-                    kind: TokenKind::FN
+                    kind: TokenKind::Fn
                 },
                 Token {
-                    kind: TokenKind::IDENTIFIER("main".to_owned()),
+                    kind: TokenKind::Identifier("main".to_owned()),
                 },
                 Token {
-                    kind: TokenKind::LPAREN
+                    kind: TokenKind::LParen
                 },
                 Token {
-                    kind: TokenKind::RPAREN
+                    kind: TokenKind::RParen
                 },
                 Token {
-                    kind: TokenKind::LBRACE
+                    kind: TokenKind::LBrace
                 },
                 Token {
-                    kind: TokenKind::RBRACE
+                    kind: TokenKind::RBrace
                 }
             ]
         );
