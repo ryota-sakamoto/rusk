@@ -291,30 +291,89 @@ mod tests {
 
     #[test]
     fn expr() {
-        let tokens = vec![
-            Token {
-                kind: TokenKind::Num(12),
-            },
-            Token {
-                kind: TokenKind::Plus,
-            },
-            Token {
-                kind: TokenKind::Num(5),
-            },
-            Token {
-                kind: TokenKind::Minus,
-            },
-            Token {
-                kind: TokenKind::Num(1),
-            },
-        ];
-        let mut parser = Parser::new(&tokens);
-        assert_eq!(
-            parser.expr(),
-            Node::Sub(
-                Box::new(Node::Add(Box::new(Node::Num(12)), Box::new(Node::Num(5)))),
-                Box::new(Node::Num(1))
+        let tests = [
+            (
+                vec![
+                    Token {
+                        kind: TokenKind::Num(12),
+                    },
+                    Token {
+                        kind: TokenKind::Plus,
+                    },
+                    Token {
+                        kind: TokenKind::Num(5),
+                    },
+                    Token {
+                        kind: TokenKind::Minus,
+                    },
+                    Token {
+                        kind: TokenKind::Num(1),
+                    },
+                ],
+                Node::Sub(
+                    Box::new(Node::Add(Box::new(Node::Num(12)), Box::new(Node::Num(5)))),
+                    Box::new(Node::Num(1)),
+                ),
             ),
-        );
+            (
+                vec![
+                    Token {
+                        kind: TokenKind::Identifier("a".to_owned()),
+                    },
+                    Token {
+                        kind: TokenKind::Eq,
+                    },
+                    Token {
+                        kind: TokenKind::Num(1),
+                    },
+                ],
+                Node::Eq(Box::new(Node::RLet("a".to_owned())), Box::new(Node::Num(1))),
+            ),
+        ];
+
+        for (tokens, expected) in tests {
+            let mut parser = Parser::new(&tokens);
+            assert_eq!(parser.expr(), expected);
+        }
+    }
+
+    #[test]
+    fn primary() {
+        let tests = [
+            (
+                vec![Token {
+                    kind: TokenKind::Num(1),
+                }],
+                Node::Num(1),
+            ),
+            (
+                vec![
+                    Token {
+                        kind: TokenKind::Identifier("f".to_owned()),
+                    },
+                    Token {
+                        kind: TokenKind::LParen,
+                    },
+                    Token {
+                        kind: TokenKind::Num(5),
+                    },
+                    Token {
+                        kind: TokenKind::Comma,
+                    },
+                    Token {
+                        kind: TokenKind::Num(3),
+                    },
+                    Token {
+                        kind: TokenKind::RParen,
+                    },
+                ],
+                Node::Call("f".to_owned(), vec![Node::Num(5), Node::Num(3)]),
+            ),
+        ];
+
+        for (tokens, expected) in tests {
+            let mut parser = Parser::new(&tokens);
+            assert_eq!(parser.primary(), expected);
+        }
     }
 }

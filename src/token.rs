@@ -207,4 +207,28 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn string() {
+        assert_eq!(
+            tokenize(r#"let s = "let a = 1";"#),
+            vec![
+                Token {
+                    kind: TokenKind::Let,
+                },
+                Token {
+                    kind: TokenKind::Identifier("s".to_owned())
+                },
+                Token {
+                    kind: TokenKind::Assign,
+                },
+                Token {
+                    kind: TokenKind::String("let a = 1".to_owned()),
+                },
+                Token {
+                    kind: TokenKind::Semi,
+                }
+            ]
+        );
+    }
 }
