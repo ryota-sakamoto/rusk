@@ -12,6 +12,7 @@ pub struct Function {
     pub name: String,
     pub args: Vec<Arg>,
     pub body: Vec<Node>,
+    pub ty: String,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -112,7 +113,15 @@ impl<'a> Parser<'a> {
 
         if !self.consume(TokenKind::RPAREN) {
             panic!("should be TokenKind::RPAREN");
-        } else if !self.consume(TokenKind::LBRACE) {
+        }
+
+        let ty = if self.consume(TokenKind::ARROW) {
+            self.identifier().expect("should be identifier")
+        } else {
+            "void".to_owned()
+        };
+
+        if !self.consume(TokenKind::LBRACE) {
             panic!("should be TokenKind::LBRACE");
         }
 
@@ -121,7 +130,12 @@ impl<'a> Parser<'a> {
             body.push(node);
         }
 
-        return Function { name, args, body };
+        return Function {
+            name,
+            args,
+            body,
+            ty,
+        };
     }
 
     fn stmt(&mut self) -> Node {

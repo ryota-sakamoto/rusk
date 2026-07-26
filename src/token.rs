@@ -18,6 +18,7 @@ pub enum TokenKind {
     EQ,
     IF,
     ELSE,
+    ARROW,
     IDENTIFIER(String),
     NUM(i32),
     STRING(String),
@@ -46,9 +47,17 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '+' => tokens.push(Token {
                 kind: TokenKind::PLUS,
             }),
-            '-' => tokens.push(Token {
-                kind: TokenKind::MINUS,
-            }),
+            '-' => {
+                if chars.next_if_eq(&'>').is_some() {
+                    tokens.push(Token {
+                        kind: TokenKind::ARROW,
+                    });
+                } else {
+                    tokens.push(Token {
+                        kind: TokenKind::MINUS,
+                    })
+                }
+            }
             '*' => tokens.push(Token {
                 kind: TokenKind::MUL,
             }),

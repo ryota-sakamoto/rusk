@@ -1,5 +1,5 @@
 // EXPECTED: 64
-fn f(a: i32, b: i32, c: i32) {
+fn f(a: i32, b: i32, c: i32) -> i32 {
     let d = (a - b) * c;
     return d * 4;
 }

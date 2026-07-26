@@ -1,5 +1,5 @@
 // EXPECTED: 100
-fn f() {
+fn f() -> i32 {
     return 100;
 }
 fn main() {

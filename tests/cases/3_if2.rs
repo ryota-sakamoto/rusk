@@ -1,5 +1,5 @@
 // EXPECTED: 5
-fn f(n: i32) {
+fn f(n: i32) -> i32 {
     if (n == 1) {
         return 3;
     } else {

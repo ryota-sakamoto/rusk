@@ -98,6 +98,7 @@ struct GenerateFunction<'a> {
     label: u64,
     map: HashMap<&'a str, String>,
     string_map: &'a HashMap<&'a str, String>,
+    has_return: bool,
 }
 
 impl<'a> GenerateFunction<'a> {
@@ -108,7 +109,12 @@ impl<'a> GenerateFunction<'a> {
             label: 0,
             map: HashMap::new(),
             string_map,
+            has_return: false,
         }
+    }
+
+    fn is_main(&self) -> bool {
+        self.function.name == "main"
     }
 
     fn generate(mut self) {
@@ -120,7 +126,12 @@ impl<'a> GenerateFunction<'a> {
         }
 
         println!(
-            "define i32 @{}({}) {{",
+            "define {} @{}({}) {{",
+            if self.is_main() {
+                "i32"
+            } else {
+                self.function.ty.as_str()
+            },
             self.function.name,
             regs.into_iter().collect::<Vec<String>>().join(", "),
         );
@@ -128,6 +139,16 @@ impl<'a> GenerateFunction<'a> {
 
         for node in self.function.body.iter() {
             self.generate_node(node);
+        }
+
+        if !self.has_return {
+            if self.function.ty != "void" {
+                panic!("should have return");
+            } else if self.is_main() {
+                println!("  ret i32 0");
+            } else {
+                println!("  ret void");
+            }
         }
         println!("}}");
     }
@@ -217,8 +238,9 @@ impl<'a> GenerateFunction<'a> {
                 };
             }
             Node::RET(n) => {
+                self.has_return = true;
                 let ret = self.generate_node(n);
-                println!("  ret i32 {}", ret.name);
+                println!("  ret {} {}", ret.ty, ret.name);
                 return Value {
                     name: format!(""),
                     ty: Type::Int,

@@ -1,5 +1,5 @@
 // EXPECTED: 23
-fn f() {
+fn f() -> i32 {
     let a = 5;
     let b = 4;
     return a * (b + 3);
