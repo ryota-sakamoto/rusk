@@ -11,7 +11,7 @@ pub struct Program {
 pub struct Function {
     pub name: String,
     pub args: Vec<Arg>,
-    pub body: Vec<Node>,
+    pub body: Node,
     pub ty: String,
 }
 
@@ -34,7 +34,8 @@ pub enum Node {
     RLet(String),
     Call(String, Vec<Node>),
     Eq(Box<Node>, Box<Node>),
-    If(Box<Node>, Vec<Node>, Vec<Node>),
+    If(Box<Node>, Box<Node>, Option<Box<Node>>),
+    Block(Vec<Node>),
 }
 
 pub struct Parser<'a> {
@@ -90,8 +91,6 @@ impl<'a> Parser<'a> {
     }
 
     fn function(&mut self) -> Function {
-        let mut body = Vec::new();
-
         let name = self.identifier().expect("should be identifier");
         if !self.consume(TokenKind::LParen) {
             panic!("should be TokenKind::LPAREN");
@@ -121,14 +120,7 @@ impl<'a> Parser<'a> {
             "void".to_owned()
         };
 
-        if !self.consume(TokenKind::LBrace) {
-            panic!("should be TokenKind::LBRACE");
-        }
-
-        while !self.consume(TokenKind::RBrace) {
-            let node = self.stmt();
-            body.push(node);
-        }
+        let body = self.block();
 
         Function {
             name,
@@ -141,28 +133,15 @@ impl<'a> Parser<'a> {
     fn stmt(&mut self) -> Node {
         if self.consume(TokenKind::If) {
             let node = self.expr();
-            if !self.consume(TokenKind::LBrace) {
-                panic!("should be TokenKind::LBRACE");
-            }
 
-            let mut body = Vec::new();
-            while !self.consume(TokenKind::RBrace) {
-                let node = self.stmt();
-                body.push(node);
-            }
+            let body = self.block();
+            let ebody = if self.consume(TokenKind::Else) {
+                Some(Box::new(self.block()))
+            } else {
+                None
+            };
 
-            let mut ebody = Vec::new();
-            if self.consume(TokenKind::Else) {
-                if !self.consume(TokenKind::LBrace) {
-                    panic!("should be TokenKind::LBRACE");
-                }
-                while !self.consume(TokenKind::RBrace) {
-                    let node = self.stmt();
-                    ebody.push(node);
-                }
-            }
-
-            return Node::If(Box::new(node), body, ebody);
+            return Node::If(Box::new(node), Box::new(body), ebody);
         }
 
         let return_node = self.consume(TokenKind::Ret);
@@ -189,6 +168,20 @@ impl<'a> Parser<'a> {
         } else {
             node
         }
+    }
+
+    fn block(&mut self) -> Node {
+        let mut body = Vec::new();
+
+        if !self.consume(TokenKind::LBrace) {
+            panic!("should be TokenKind::LBRACE");
+        }
+        while !self.consume(TokenKind::RBrace) {
+            let node = self.stmt();
+            body.push(node);
+        }
+
+        return Node::Block(body);
     }
 
     fn expr(&mut self) -> Node {

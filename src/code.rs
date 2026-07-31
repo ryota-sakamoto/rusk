@@ -25,9 +25,7 @@ impl<'a> Generator<'a> {
 
     fn parse(&mut self) {
         for f in &self.program.functions {
-            for node in &f.body {
-                self.parse_node(node);
-            }
+            self.parse_node(&f.body);
         }
     }
 
@@ -42,6 +40,11 @@ impl<'a> Generator<'a> {
                 self.string_map
                     .insert(s, format!("@.str.{}", self.string_index));
                 self.string_index += 1;
+            }
+            Node::Block(body) => {
+                for v in body {
+                    self.parse_node(v);
+                }
             }
             _ => {}
         }
@@ -134,10 +137,7 @@ impl<'a> GenerateFunction<'a> {
             regs.into_iter().collect::<Vec<String>>().join(", "),
         );
         println!("entry:");
-
-        for node in self.function.body.iter() {
-            self.generate_node(node);
-        }
+        self.generate_node(&self.function.body);
 
         if !self.has_return {
             if self.function.ty != "void" {
@@ -302,7 +302,7 @@ impl<'a> GenerateFunction<'a> {
                 let ln = self.generate_node(l);
                 let label = self.new_label();
 
-                let else_label = if !ebody.is_empty() {
+                let else_label = if ebody.is_some() {
                     format!("elseif_{label}")
                 } else {
                     format!("else_{label}")
@@ -314,19 +314,25 @@ impl<'a> GenerateFunction<'a> {
                 );
 
                 println!("  if_{label}:");
-                for f in body {
-                    self.generate_node(f);
-                }
+                self.generate_node(body);
                 println!("  br label %else_{label}");
 
-                if !ebody.is_empty() {
+                if let Some(ebody) = ebody {
                     println!("  elseif_{label}:");
-                    for f in ebody {
-                        self.generate_node(f);
-                    }
+                    self.generate_node(ebody);
                 }
 
                 println!("  else_{label}:");
+
+                Value {
+                    name: String::new(),
+                    ty: Type::Int,
+                }
+            }
+            Node::Block(body) => {
+                for node in body {
+                    self.generate_node(node);
+                }
 
                 Value {
                     name: String::new(),
