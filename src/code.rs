@@ -97,7 +97,7 @@ struct GenerateFunction<'a> {
     function: &'a Function,
     index: u64,
     label: u64,
-    map: HashMap<&'a str, String>,
+    map: HashMap<&'a str, Value>,
     string_map: &'a HashMap<&'a str, String>,
     has_return: bool,
 }
@@ -120,10 +120,22 @@ impl<'a> GenerateFunction<'a> {
 
     fn generate(mut self) {
         let mut regs = Vec::new();
+        let mut entry_instructions = Vec::new();
+
         for arg in self.function.args.iter() {
+            let arg_reg = self.new_reg();
+            regs.push(format!("{} %r{arg_reg}", arg.ty));
+
             let reg = self.new_reg();
-            self.map.insert(&arg.name, format!("%r{reg}"));
-            regs.push(format!("{} %r{reg}", arg.ty));
+            entry_instructions.push(format!("  %r{reg} = alloca {}", arg.ty));
+            entry_instructions.push(format!("  store {} %r{arg_reg}, ptr %r{reg}", arg.ty));
+            self.map.insert(
+                &arg.name,
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Ptr,
+                },
+            );
         }
 
         println!(
@@ -137,6 +149,9 @@ impl<'a> GenerateFunction<'a> {
             regs.into_iter().collect::<Vec<String>>().join(", "),
         );
         println!("entry:");
+        for v in entry_instructions {
+            println!("{v}");
+        }
         self.generate_node(&self.function.body);
 
         if !self.has_return {
@@ -265,15 +280,28 @@ impl<'a> GenerateFunction<'a> {
                 }
             }
             Node::Let(name, right) => {
+                let reg = self.new_reg();
                 let r = self.generate_node(right);
-                self.map.insert(name, r.name.clone());
+                println!("  %r{reg} = alloca i32");
+                println!("  store i32 {}, ptr %r{}", r.name, reg);
+
+                self.map.insert(
+                    name,
+                    Value {
+                        name: format!("%r{reg}"),
+                        ty: Type::Ptr,
+                    },
+                );
 
                 r
             }
             Node::RLet(name) => {
+                let reg = self.new_reg();
                 let r = self.map.get(name.as_str()).unwrap();
+                println!("  %r{reg} = load i32, ptr {}", r.name);
+
                 Value {
-                    name: r.clone(),
+                    name: format!("%r{reg}"),
                     ty: Type::Int,
                 }
             }
