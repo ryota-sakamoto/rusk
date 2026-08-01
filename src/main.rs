@@ -2,6 +2,7 @@ use std::env::args;
 
 mod ast;
 mod code;
+mod semantic;
 mod token;
 
 fn main() {
@@ -15,5 +16,6 @@ fn main() {
     let tokens = token::tokenize(p);
     let mut parser = ast::Parser::new(&tokens);
     let program = parser.program();
+    semantic::analyze(&program);
     code::generate(&program);
 }
