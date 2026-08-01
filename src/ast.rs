@@ -155,30 +155,35 @@ impl<'a> Parser<'a> {
             return Node::If(Box::new(node), Box::new(body), ebody);
         }
 
-        let return_node = self.consume(TokenKind::Ret);
-        let let_name = if self.consume(TokenKind::Let) {
+        if self.consume(TokenKind::Ret) {
+            let node = self.expr();
+            if !self.consume(TokenKind::Semi) {
+                panic!("should be TokenKind::SEMI");
+            }
+
+            return Node::Ret(Box::new(node));
+        }
+
+        if self.consume(TokenKind::Let) {
             let identifier = self.identifier().expect("should be identifier");
             if !self.consume(TokenKind::Assign) {
                 panic!("should be TokenKind::ASSIGN");
             }
 
-            Some(identifier)
-        } else {
-            None
-        };
+            let node = self.expr();
+            if !self.consume(TokenKind::Semi) {
+                panic!("should be TokenKind::SEMI");
+            }
+
+            return Node::Let(identifier, Box::new(node));
+        }
 
         let node = self.expr();
         if !self.consume(TokenKind::Semi) {
-            panic!("should be TokenKind:: SEMI");
+            panic!("should be TokenKind::SEMI");
         }
 
-        if return_node {
-            Node::Ret(Box::new(node))
-        } else if let Some(name) = let_name {
-            Node::Let(name, Box::new(node))
-        } else {
-            node
-        }
+        node
     }
 
     fn block(&mut self) -> Node {
