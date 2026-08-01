@@ -53,10 +53,17 @@ impl<'a> Parser<'a> {
     }
 
     fn consume(&mut self, kind: TokenKind) -> bool {
+        if self.peek(kind) {
+            self.pos += 1;
+            return true;
+        }
+        false
+    }
+
+    fn peek(&self, kind: TokenKind) -> bool {
         if let Some(t) = self.current()
             && t.kind == kind
         {
-            self.pos += 1;
             return true;
         }
 
@@ -136,7 +143,11 @@ impl<'a> Parser<'a> {
 
             let body = self.block();
             let ebody = if self.consume(TokenKind::Else) {
-                Some(Box::new(self.block()))
+                if self.peek(TokenKind::If) {
+                    Some(Box::new(self.stmt()))
+                } else {
+                    Some(Box::new(self.block()))
+                }
             } else {
                 None
             };

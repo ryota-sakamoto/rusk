@@ -320,6 +320,7 @@ impl<'a> GenerateFunction<'a> {
                 if let Some(ebody) = ebody {
                     println!("  elseif_{label}:");
                     self.generate_node(ebody);
+                    println!("  br label %else_{label}");
                 }
 
                 println!("  else_{label}:");
