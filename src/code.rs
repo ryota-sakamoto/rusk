@@ -215,19 +215,10 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Int,
                 }
             }
-            Node::Num(n) => {
-                let reg = self.new_reg();
-                println!("  %r{} = alloca i32", reg);
-                println!("  store i32 {}, ptr %r{}", n, reg);
-
-                let reg2 = self.new_reg();
-                println!("  %r{} = load i32, ptr %r{}", reg2, reg);
-
-                Value {
-                    name: format!("%r{reg2}"),
-                    ty: Type::Int,
-                }
-            }
+            Node::Num(n) => Value {
+                name: n.to_string(),
+                ty: Type::Int,
+            },
             Node::String(s) => {
                 let name = self.string_map.get(s.as_str()).unwrap();
                 Value {
