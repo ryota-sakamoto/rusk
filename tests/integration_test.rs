@@ -1,6 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use std::{env, fs, path::Path, process::Command};
+    use std::{
+        env, fs,
+        path::Path,
+        process::{Command, Stdio},
+    };
 
     fn run_and_assert(input: &str, expected: i32) {
         let dir = env::temp_dir();
@@ -10,6 +14,7 @@ mod tests {
 
         let output = Command::new("cargo")
             .args(&["run", "--quiet", "--", input])
+            .stderr(Stdio::inherit())
             .output()
             .expect("Failed to execute compiler");
 
