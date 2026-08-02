@@ -106,7 +106,8 @@ impl<'a> Parser<'a> {
 
         let mut args = Vec::new();
 
-        while let Some(name) = self.identifier() {
+        while !self.consume(TokenKind::RParen) {
+            let name = self.identifier().expect("should be identifier");
             if !self.consume(TokenKind::Colon) {
                 panic!("should be TokenKind::COLON");
             }
@@ -116,10 +117,6 @@ impl<'a> Parser<'a> {
             self.consume(TokenKind::Comma);
 
             args.push(Arg { name, ty });
-        }
-
-        if !self.consume(TokenKind::RParen) {
-            panic!("should be TokenKind::RPAREN");
         }
 
         let ty = if self.consume(TokenKind::Arrow) {
@@ -257,18 +254,18 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> Node {
         if let Some(identifier) = self.identifier() {
-            if !self.consume(TokenKind::LParen) {
-                return Node::RLet(identifier);
+            if self.consume(TokenKind::LParen) {
+                let mut args = Vec::new();
+                while !self.consume(TokenKind::RParen) {
+                    let expr = self.expr();
+                    args.push(expr);
+                    self.consume(TokenKind::Comma);
+                }
+
+                return Node::Call(identifier, args);
             }
 
-            let mut args = Vec::new();
-            while !self.consume(TokenKind::RParen) {
-                let expr = self.expr();
-                args.push(expr);
-                self.consume(TokenKind::Comma);
-            }
-
-            return Node::Call(identifier, args);
+            return Node::RLet(identifier);
         }
 
         if self.consume(TokenKind::LParen) {
