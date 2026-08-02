@@ -34,6 +34,7 @@ pub enum Node {
     RLet(String),
     Call(String, Vec<Node>),
     Eq(Box<Node>, Box<Node>),
+    Ne(Box<Node>, Box<Node>),
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     Block(Vec<Node>),
 }
@@ -209,6 +210,8 @@ impl<'a> Parser<'a> {
 
         if self.consume(TokenKind::Eq) {
             node = Node::Eq(Box::new(node), Box::new(self.add()));
+        } else if self.consume(TokenKind::Ne) {
+            node = Node::Ne(Box::new(node), Box::new(self.add()));
         }
 
         node

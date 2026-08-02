@@ -16,6 +16,7 @@ pub enum TokenKind {
     Assign,
     Comma,
     Eq,
+    Ne,
     If,
     Else,
     Arrow,
@@ -67,6 +68,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     push_token(TokenKind::Eq);
                 } else {
                     push_token(TokenKind::Assign);
+                }
+            }
+            '!' => {
+                if chars.next_if_eq(&'=').is_some() {
+                    push_token(TokenKind::Ne);
                 }
             }
             ',' => push_token(TokenKind::Comma),
@@ -185,6 +191,36 @@ mod tests {
                 Token {
                     kind: TokenKind::Semi,
                 }
+            ]
+        );
+    }
+
+    #[test]
+    fn ne() {
+        assert_eq!(
+            tokenize(r#"let b = a != 2;"#),
+            vec![
+                Token {
+                    kind: TokenKind::Let,
+                },
+                Token {
+                    kind: TokenKind::Identifier("b".to_owned())
+                },
+                Token {
+                    kind: TokenKind::Assign,
+                },
+                Token {
+                    kind: TokenKind::Identifier("a".to_owned())
+                },
+                Token {
+                    kind: TokenKind::Ne,
+                },
+                Token {
+                    kind: TokenKind::Num(2),
+                },
+                Token {
+                    kind: TokenKind::Semi,
+                },
             ]
         );
     }
