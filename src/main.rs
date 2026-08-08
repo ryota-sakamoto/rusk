@@ -1,4 +1,4 @@
-use std::env::args;
+use std::{env::args, fs};
 
 mod ast;
 mod code;
@@ -11,9 +11,9 @@ fn main() {
         panic!("args should be specified.");
     }
 
-    let p = &args[1];
+    let p = fs::read_to_string(&args[1]).unwrap();
 
-    let tokens = token::tokenize(p);
+    let tokens = token::tokenize(&p);
     let mut parser = ast::Parser::new(&tokens);
     let program = parser.program();
     semantic::analyze(&program);

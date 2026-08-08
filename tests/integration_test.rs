@@ -6,14 +6,14 @@ mod tests {
         process::{Command, Stdio},
     };
 
-    fn run_and_assert(input: &str, expected: i32) {
+    fn run_and_assert(path: &Path, expected: i32) {
         let dir = env::temp_dir();
 
         let mut ll_path = dir.clone();
         ll_path.push("test.ll");
 
         let output = Command::new("cargo")
-            .args(&["run", "--quiet", "--", input])
+            .args(&["run", "--quiet", "--", &path.to_string_lossy()])
             .stderr(Stdio::inherit())
             .output()
             .expect("Failed to execute compiler");
@@ -65,7 +65,7 @@ mod tests {
                 .unwrap();
 
             println!("run {:?}", entry.path());
-            run_and_assert(&content, expected);
+            run_and_assert(&entry.path(), expected);
         }
     }
 }
