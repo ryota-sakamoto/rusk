@@ -1,3 +1,4 @@
+use core::panic;
 use std::{collections::HashMap, fmt::Display};
 
 use crate::ast::{Function, Node, Program};
@@ -10,6 +11,7 @@ pub fn generate(program: &Program) {
 
 struct Generator<'a> {
     string_map: HashMap<&'a str, String>,
+    function_map: HashMap<&'a str, &'a str>,
     string_index: u64,
     program: &'a Program,
 }
@@ -18,14 +20,17 @@ impl<'a> Generator<'a> {
     fn new(program: &'a Program) -> Self {
         Self {
             string_map: HashMap::new(),
+            function_map: HashMap::new(),
             string_index: 0,
             program,
         }
     }
 
     fn parse(&mut self) {
+        self.function_map.insert("printf", "i32");
         for f in &self.program.functions {
             self.parse_node(&f.body);
+            self.function_map.insert(&f.name, &f.ty);
         }
     }
 
@@ -64,15 +69,27 @@ impl<'a> Generator<'a> {
 
         for f in self.program.functions.iter() {
             println!();
-            let generator = GenerateFunction::new(f, &self.string_map);
+            let generator = GenerateFunction::new(f, &self.string_map, &self.function_map);
             generator.generate();
         }
     }
 }
 
+#[derive(Clone)]
 pub enum Type {
     Int,
-    Ptr,
+    Int8,
+    Ptr(Box<Type>),
+}
+
+impl From<&str> for Type {
+    fn from(value: &str) -> Self {
+        match value {
+            "i32" => Type::Int,
+            "i8" => Type::Int8,
+            _ => panic!("not supported: {value}"),
+        }
+    }
 }
 
 impl Display for Type {
@@ -82,9 +99,19 @@ impl Display for Type {
             "{}",
             match self {
                 Type::Int => "i32",
-                Type::Ptr => "ptr",
+                Type::Int8 => "i8",
+                Type::Ptr(_) => "ptr",
             }
         )
+    }
+}
+
+impl Type {
+    fn inner(&self) -> &Self {
+        match self {
+            Type::Ptr(v) => v,
+            _ => panic!("not ptr"),
+        }
     }
 }
 
@@ -99,17 +126,23 @@ struct GenerateFunction<'a> {
     label: u64,
     map: HashMap<&'a str, Value>,
     string_map: &'a HashMap<&'a str, String>,
+    function_map: &'a HashMap<&'a str, &'a str>,
     has_return: bool,
 }
 
 impl<'a> GenerateFunction<'a> {
-    fn new(function: &'a Function, string_map: &'a HashMap<&'a str, String>) -> Self {
+    fn new(
+        function: &'a Function,
+        string_map: &'a HashMap<&'a str, String>,
+        function_map: &'a HashMap<&'a str, &'a str>,
+    ) -> Self {
         Self {
             function,
             index: 0,
             label: 0,
             map: HashMap::new(),
             string_map,
+            function_map,
             has_return: false,
         }
     }
@@ -133,7 +166,7 @@ impl<'a> GenerateFunction<'a> {
                 &arg.name,
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Ptr,
+                    ty: Type::Ptr(Box::new(Type::from(arg.ty.as_str()))),
                 },
             );
         }
@@ -187,11 +220,11 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = add i32 {}, {}", reg, ln.name, rn.name);
+                println!("  %r{} = add {} {}, {}", reg, ln.ty, ln.name, rn.name);
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Int,
+                    ty: ln.ty,
                 }
             }
             Node::Sub(l, r) => {
@@ -199,11 +232,11 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = sub i32 {}, {}", reg, ln.name, rn.name);
+                println!("  %r{} = sub {} {}, {}", reg, ln.ty, ln.name, rn.name);
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Int,
+                    ty: ln.ty,
                 }
             }
             Node::Mul(l, r) => {
@@ -211,11 +244,11 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = mul i32 {}, {}", reg, ln.name, rn.name);
+                println!("  %r{} = mul {} {}, {}", reg, ln.ty, ln.name, rn.name);
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Int,
+                    ty: ln.ty,
                 }
             }
             Node::Div(l, r) => {
@@ -223,11 +256,11 @@ impl<'a> GenerateFunction<'a> {
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = sdiv i32 {}, {}", reg, ln.name, rn.name);
+                println!("  %r{} = sdiv {} {}, {}", reg, ln.ty, ln.name, rn.name);
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Int,
+                    ty: ln.ty,
                 }
             }
             Node::Num(n) => Value {
@@ -238,7 +271,7 @@ impl<'a> GenerateFunction<'a> {
                 let name = self.string_map.get(s.as_str()).unwrap();
                 Value {
                     name: name.clone(),
-                    ty: Type::Ptr,
+                    ty: Type::Ptr(Box::new(Type::Int)),
                 }
             }
             Node::Ret(n) => {
@@ -247,7 +280,7 @@ impl<'a> GenerateFunction<'a> {
                 println!("  ret {} {}", ret.ty, ret.name);
                 Value {
                     name: String::new(),
-                    ty: Type::Int,
+                    ty: ret.ty,
                 }
             }
             Node::Call(name, args) => {
@@ -258,11 +291,14 @@ impl<'a> GenerateFunction<'a> {
                     call_args.push(ret);
                 }
 
+                let fn_ty = self.function_map[name.as_str()];
+
                 let reg = self.new_reg();
                 if !call_args.is_empty() {
                     println!(
-                        "  %r{} = call i32 @{}({})",
+                        "  %r{} = call {} @{}({})",
                         reg,
+                        fn_ty,
                         name,
                         call_args
                             .iter()
@@ -271,12 +307,12 @@ impl<'a> GenerateFunction<'a> {
                             .join(", ")
                     );
                 } else {
-                    println!("  %r{} = call i32 @{}()", reg, name);
+                    println!("  %r{} = call {} @{}()", reg, fn_ty, name);
                 }
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Int,
+                    ty: Type::from(fn_ty),
                 }
             }
             Node::Let(name, right) => {
@@ -289,7 +325,7 @@ impl<'a> GenerateFunction<'a> {
                     name,
                     Value {
                         name: format!("%r{reg}"),
-                        ty: Type::Ptr,
+                        ty: Type::Ptr(Box::new(Type::Int)),
                     },
                 );
 
@@ -298,11 +334,12 @@ impl<'a> GenerateFunction<'a> {
             Node::RLet(name) => {
                 let reg = self.new_reg();
                 let r = self.map.get(name.as_str()).unwrap();
-                println!("  %r{reg} = load i32, ptr {}", r.name);
+                let inner_ty = r.ty.inner();
+                println!("  %r{reg} = load {}, ptr {}", inner_ty, r.name);
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Int,
+                    ty: inner_ty.clone(),
                 }
             }
             Node::Eq(l, r) => {
