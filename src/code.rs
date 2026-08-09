@@ -430,6 +430,32 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Int,
                 }
             }
+            Node::While(l, body) => {
+                println!("  ; while");
+                let label = self.new_label();
+                let cond_label = format!("cond_{label}");
+                let while_label = format!("while_{label}");
+                let whileend_label = format!("whileend_{label}");
+                println!("  br label %{cond_label}");
+
+                println!("{cond_label}:");
+                let ln = self.generate_node(l);
+                println!(
+                    "  br i1 {}, label %{while_label}, label%{whileend_label}",
+                    ln.name
+                );
+
+                println!("{while_label}:");
+                self.generate_node(body);
+                println!("  br label %{cond_label}");
+
+                println!("whileend_{label}:");
+
+                Value {
+                    name: String::new(),
+                    ty: Type::Int,
+                }
+            }
             Node::Block(body) => {
                 for node in body {
                     self.generate_node(node);

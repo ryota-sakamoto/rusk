@@ -26,6 +26,7 @@ pub enum TokenKind {
     If,
     Else,
     Arrow,
+    While,
     Identifier(String),
     Num(i32),
     String(String),
@@ -136,6 +137,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "let" => push_token(TokenKind::Let),
                     "if" => push_token(TokenKind::If),
                     "else" => push_token(TokenKind::Else),
+                    "while" => push_token(TokenKind::While),
                     _ => push_token(TokenKind::Identifier(identifier)),
                 }
             }

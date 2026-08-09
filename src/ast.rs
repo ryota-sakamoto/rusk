@@ -38,6 +38,7 @@ pub enum Node {
     And(Box<Node>, Box<Node>),
     Or(Box<Node>, Box<Node>),
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
+    While(Box<Node>, Box<Node>),
     Block(Vec<Node>),
 }
 
@@ -163,6 +164,13 @@ impl<'a> Parser<'a> {
             };
 
             return Node::If(Box::new(node), Box::new(body), ebody);
+        }
+
+        if self.consume(TokenKind::While) {
+            let node = self.expr();
+            let body = self.block();
+
+            return Node::While(Box::new(node), Box::new(body));
         }
 
         if self.consume(TokenKind::Ret) {
