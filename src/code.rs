@@ -315,7 +315,7 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::from(fn_ty),
                 }
             }
-            Node::Let(name, right) => {
+            Node::Let(name, right, _) => {
                 let reg = self.new_reg();
                 let r = self.generate_node(right);
                 println!("  %r{reg} = alloca i32");

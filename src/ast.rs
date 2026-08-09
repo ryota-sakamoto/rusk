@@ -30,7 +30,7 @@ pub enum Node {
     Num(i32),
     String(String),
     Ret(Box<Node>),
-    Let(String, Box<Node>),
+    Let(String, Box<Node>, bool),
     RLet(String),
     Assign(String, Box<Node>),
     Call(String, Vec<Node>),
@@ -183,6 +183,7 @@ impl<'a> Parser<'a> {
         }
 
         if self.consume(TokenKind::Let) {
+            let is_mut = self.consume(TokenKind::Mut);
             let identifier = self.identifier().expect("should be identifier");
             if !self.consume(TokenKind::Assign) {
                 panic!("should be TokenKind::ASSIGN");
@@ -193,7 +194,7 @@ impl<'a> Parser<'a> {
                 panic!("should be TokenKind::SEMI");
             }
 
-            return Node::Let(identifier, Box::new(node));
+            return Node::Let(identifier, Box::new(node), is_mut);
         }
 
         let node = self.expr();

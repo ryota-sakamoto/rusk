@@ -48,14 +48,14 @@ impl<'a> Analyzer<'a> {
 struct FunctionAnalyzer<'a> {
     function: &'a Function,
     functions: &'a HashMap<&'a str, &'a Function>,
-    map: Vec<&'a str>,
+    map: HashMap<&'a str, bool>,
 }
 
 impl<'a> FunctionAnalyzer<'a> {
     fn new(function: &'a Function, functions: &'a HashMap<&'a str, &'a Function>) -> Self {
-        let mut map = Vec::new();
+        let mut map = HashMap::new();
         for arg in &function.args {
-            map.push(arg.name.as_str());
+            map.insert(arg.name.as_str(), false);
         }
 
         Self {
@@ -75,12 +75,12 @@ impl<'a> FunctionAnalyzer<'a> {
                 self.analyze_node(l);
                 self.analyze_node(r);
             }
-            Node::Let(name, node) => {
+            Node::Let(name, node, is_mut) => {
                 self.analyze_node(node);
-                self.map.push(name);
+                self.map.insert(name, *is_mut);
             }
             Node::RLet(name) => {
-                if !self.map.contains(&name.as_str()) {
+                if !self.map.contains_key(&name.as_str()) {
                     panic!("{:?} is not defined", name);
                 }
             }
@@ -102,6 +102,16 @@ impl<'a> FunctionAnalyzer<'a> {
                         f.args.len(),
                         args.len()
                     );
+                }
+            }
+            Node::Assign(s, b) => {
+                self.analyze_node(b);
+                let v = self
+                    .map
+                    .get(s.as_str())
+                    .unwrap_or_else(|| panic!("{:?} is not defined", s));
+                if !v {
+                    panic!("{:?} should be mut", s);
                 }
             }
             Node::Block(b) => {
@@ -169,7 +179,24 @@ mod tests {
                         Box::new(Node::RLet("b".to_owned())),
                         Box::new(Node::Num(1)),
                     )),
+                    false,
                 )]),
+                ty: "void".to_owned(),
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""a" should be mut"#)]
+    fn check_mut() {
+        analyze(&Program {
+            functions: vec![Function {
+                name: "main".to_owned(),
+                args: Vec::new(),
+                body: Node::Block(vec![
+                    Node::Let("a".to_owned(), Box::new(Node::Num(1)), false),
+                    Node::Assign("a".to_owned(), Box::new(Node::Num(3))),
+                ]),
                 ty: "void".to_owned(),
             }],
         });
