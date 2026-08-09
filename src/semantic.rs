@@ -114,6 +114,10 @@ impl<'a> FunctionAnalyzer<'a> {
                     panic!("{:?} should be mut", s);
                 }
             }
+            Node::While(l, r) => {
+                self.analyze_node(l);
+                self.analyze_node(r);
+            }
             Node::Block(b) => {
                 for v in b {
                     self.analyze_node(v);
