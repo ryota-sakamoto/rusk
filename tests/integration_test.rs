@@ -45,17 +45,28 @@ mod tests {
         assert_eq!(a, expected);
     }
 
+    fn collect_rs_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    collect_rs_files(&path, files);
+                } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                    files.push(path);
+                }
+            }
+        }
+    }
+
     #[test]
     fn test_return_numbers() {
         let cases_dir = Path::new("tests/cases");
-        let mut entries: Vec<_> = fs::read_dir(cases_dir)
-            .unwrap()
-            .map(|r| r.unwrap())
-            .collect();
-        entries.sort_by_key(|dir| dir.path());
+        let mut entries = Vec::new();
+        collect_rs_files(cases_dir, &mut entries);
+        entries.sort();
 
-        for entry in entries {
-            let content = fs::read_to_string(entry.path()).unwrap();
+        for path in entries {
+            let content = fs::read_to_string(&path).unwrap();
 
             let first_line = content.lines().next().unwrap();
             let expected: i32 = first_line
@@ -64,8 +75,8 @@ mod tests {
                 .parse()
                 .unwrap();
 
-            println!("run {:?}", entry.path());
-            run_and_assert(&entry.path(), expected);
+            println!("run {:?}", path);
+            run_and_assert(&path, expected);
         }
     }
 }
