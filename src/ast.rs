@@ -32,6 +32,7 @@ pub enum Node {
     Ret(Box<Node>),
     Let(String, Box<Node>),
     RLet(String),
+    Assign(String, Box<Node>),
     Call(String, Vec<Node>),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
     And(Box<Node>, Box<Node>),
@@ -290,6 +291,10 @@ impl<'a> Parser<'a> {
                 }
 
                 return Node::Call(identifier, args);
+            }
+
+            if self.consume(TokenKind::Assign) {
+                return Node::Assign(identifier, Box::new(self.expr()));
             }
 
             return Node::RLet(identifier);

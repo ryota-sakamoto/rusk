@@ -342,6 +342,13 @@ impl<'a> GenerateFunction<'a> {
                     ty: inner_ty.clone(),
                 }
             }
+            Node::Assign(name, r) => {
+                let rn = self.generate_node(r);
+                let l = self.map.get(name.as_str()).unwrap();
+                println!("  store {} {}, ptr {}", rn.ty, rn.name, l.name);
+
+                rn
+            }
             Node::Comparison(t, l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
