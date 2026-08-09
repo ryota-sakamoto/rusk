@@ -22,6 +22,7 @@ pub enum TokenKind {
     Lt,
     Le,
     And,
+    Or,
     If,
     Else,
     Arrow,
@@ -97,6 +98,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '&' => {
                 if chars.next_if_eq(&'&').is_some() {
                     push_token(TokenKind::And);
+                }
+            }
+            '|' => {
+                if chars.next_if_eq(&'|').is_some() {
+                    push_token(TokenKind::Or);
                 }
             }
             ',' => push_token(TokenKind::Comma),

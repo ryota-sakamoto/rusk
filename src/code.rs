@@ -379,6 +379,18 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Int,
                 }
             }
+            Node::Or(l, r) => {
+                let ln = self.generate_node(l);
+                let rn = self.generate_node(r);
+
+                let reg = self.new_reg();
+                println!("  %r{} = or i1 {}, {}", reg, ln.name, rn.name);
+
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Int,
+                }
+            }
             Node::If(l, body, ebody) => {
                 let ln = self.generate_node(l);
                 let label = self.new_label();

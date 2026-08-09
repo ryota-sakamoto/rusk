@@ -35,6 +35,7 @@ pub enum Node {
     Call(String, Vec<Node>),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
     And(Box<Node>, Box<Node>),
+    Or(Box<Node>, Box<Node>),
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     Block(Vec<Node>),
 }
@@ -213,6 +214,8 @@ impl<'a> Parser<'a> {
 
         if self.consume(TokenKind::And) {
             node = Node::And(Box::new(node), Box::new(self.equality()));
+        } else if self.consume(TokenKind::Or) {
+            node = Node::Or(Box::new(node), Box::new(self.equality()));
         }
 
         node
