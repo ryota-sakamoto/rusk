@@ -17,6 +17,10 @@ pub enum TokenKind {
     Comma,
     Eq,
     Ne,
+    Gt,
+    Ge,
+    Lt,
+    Le,
     If,
     Else,
     Arrow,
@@ -73,6 +77,20 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '!' => {
                 if chars.next_if_eq(&'=').is_some() {
                     push_token(TokenKind::Ne);
+                }
+            }
+            '<' => {
+                if chars.next_if_eq(&'=').is_some() {
+                    push_token(TokenKind::Le);
+                } else {
+                    push_token(TokenKind::Lt);
+                }
+            }
+            '>' => {
+                if chars.next_if_eq(&'=').is_some() {
+                    push_token(TokenKind::Ge);
+                } else {
+                    push_token(TokenKind::Gt);
                 }
             }
             ',' => push_token(TokenKind::Comma),

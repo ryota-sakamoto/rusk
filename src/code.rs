@@ -1,7 +1,7 @@
 use core::panic;
 use std::{collections::HashMap, fmt::Display};
 
-use crate::ast::{Function, Node, Program};
+use crate::ast::{ComparisonType, Function, Node, Program};
 
 pub fn generate(program: &Program) {
     let mut generator = Generator::new(program);
@@ -342,24 +342,25 @@ impl<'a> GenerateFunction<'a> {
                     ty: inner_ty.clone(),
                 }
             }
-            Node::Eq(l, r) => {
+            Node::Comparison(t, l, r) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = icmp eq i32 {}, {}", reg, ln.name, rn.name);
-
-                Value {
-                    name: format!("%r{reg}"),
-                    ty: Type::Int,
-                }
-            }
-            Node::Ne(l, r) => {
-                let ln = self.generate_node(l);
-                let rn = self.generate_node(r);
-
-                let reg = self.new_reg();
-                println!("  %r{} = icmp ne i32 {}, {}", reg, ln.name, rn.name);
+                println!(
+                    "  %r{} = icmp {} i32 {}, {}",
+                    reg,
+                    match t {
+                        ComparisonType::Eq => "eq",
+                        ComparisonType::Ne => "ne",
+                        ComparisonType::Gt => "sgt",
+                        ComparisonType::Ge => "sge",
+                        ComparisonType::Lt => "slt",
+                        ComparisonType::Le => "sle",
+                    },
+                    ln.name,
+                    rn.name
+                );
 
                 Value {
                     name: format!("%r{reg}"),

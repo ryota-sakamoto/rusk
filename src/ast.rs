@@ -33,10 +33,19 @@ pub enum Node {
     Let(String, Box<Node>),
     RLet(String),
     Call(String, Vec<Node>),
-    Eq(Box<Node>, Box<Node>),
-    Ne(Box<Node>, Box<Node>),
+    Comparison(ComparisonType, Box<Node>, Box<Node>),
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     Block(Vec<Node>),
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum ComparisonType {
+    Eq,
+    Ne,
+    Gt,
+    Ge,
+    Lt,
+    Le,
 }
 
 pub struct Parser<'a> {
@@ -205,10 +214,18 @@ impl<'a> Parser<'a> {
     fn equality(&mut self) -> Node {
         let mut node = self.add();
 
-        if self.consume(TokenKind::Eq) {
-            node = Node::Eq(Box::new(node), Box::new(self.add()));
-        } else if self.consume(TokenKind::Ne) {
-            node = Node::Ne(Box::new(node), Box::new(self.add()));
+        for (k, c) in [
+            (TokenKind::Eq, ComparisonType::Eq),
+            (TokenKind::Ne, ComparisonType::Ne),
+            (TokenKind::Gt, ComparisonType::Gt),
+            (TokenKind::Ge, ComparisonType::Ge),
+            (TokenKind::Lt, ComparisonType::Lt),
+            (TokenKind::Le, ComparisonType::Le),
+        ] {
+            if self.consume(k) {
+                node = Node::Comparison(c, Box::new(node), Box::new(self.add()));
+                break;
+            }
         }
 
         node
@@ -294,7 +311,7 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{Node, Parser},
+        ast::{ComparisonType, Node, Parser},
         token::{Token, TokenKind},
     };
 
@@ -336,7 +353,11 @@ mod tests {
                         kind: TokenKind::Num(1),
                     },
                 ],
-                Node::Eq(Box::new(Node::RLet("a".to_owned())), Box::new(Node::Num(1))),
+                Node::Comparison(
+                    ComparisonType::Eq,
+                    Box::new(Node::RLet("a".to_owned())),
+                    Box::new(Node::Num(1)),
+                ),
             ),
         ];
 
