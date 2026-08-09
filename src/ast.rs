@@ -34,6 +34,7 @@ pub enum Node {
     RLet(String),
     Call(String, Vec<Node>),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
+    And(Box<Node>, Box<Node>),
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     Block(Vec<Node>),
 }
@@ -208,7 +209,13 @@ impl<'a> Parser<'a> {
     }
 
     fn expr(&mut self) -> Node {
-        self.equality()
+        let mut node = self.equality();
+
+        if self.consume(TokenKind::And) {
+            node = Node::And(Box::new(node), Box::new(self.equality()));
+        }
+
+        node
     }
 
     fn equality(&mut self) -> Node {
