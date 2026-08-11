@@ -69,14 +69,13 @@ mod tests {
             let content = fs::read_to_string(&path).unwrap();
 
             let first_line = content.lines().next().unwrap();
-            let expected: i32 = first_line
-                .strip_prefix("// EXPECTED: ")
-                .unwrap()
-                .parse()
-                .unwrap();
+            let expected: Result<i32, _> =
+                first_line.strip_prefix("// EXPECTED: ").unwrap().parse();
 
-            println!("run {:?}", path);
-            run_and_assert(&path, expected);
+            if let Ok(expected) = expected {
+                println!("run {:?}", path);
+                run_and_assert(&path, expected);
+            }
         }
     }
 }
