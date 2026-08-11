@@ -4,6 +4,7 @@ use crate::token::{Token, TokenKind};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program {
+    pub mods: Vec<String>,
     pub functions: Vec<Function>,
 }
 
@@ -102,14 +103,24 @@ impl<'a> Parser<'a> {
     }
 
     pub fn program(&mut self) -> Program {
+        let mut mods = Vec::new();
         let mut functions = Vec::new();
+
+        while self.consume(TokenKind::Mod) {
+            let identifier = self.identifier().expect("should be identifier");
+            if !self.consume(TokenKind::Semi) {
+                panic!("should be TokenKind::Semi");
+            }
+
+            mods.push(identifier);
+        }
 
         while self.consume(TokenKind::Fn) {
             let f = self.function();
             functions.push(f);
         }
 
-        Program { functions }
+        Program { mods, functions }
     }
 
     fn function(&mut self) -> Function {
@@ -299,6 +310,12 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> Node {
         if let Some(identifier) = self.identifier() {
+            let mod_function = if self.consume(TokenKind::ColonColon) {
+                Some(self.identifier().expect("should be identifier"))
+            } else {
+                None
+            };
+
             if self.consume(TokenKind::LParen) {
                 let mut args = Vec::new();
                 while !self.consume(TokenKind::RParen) {
@@ -307,7 +324,8 @@ impl<'a> Parser<'a> {
                     self.consume(TokenKind::Comma);
                 }
 
-                return Node::Call(identifier, args);
+                // TODO: use mod name
+                return Node::Call(mod_function.unwrap_or(identifier), args);
             }
 
             if self.consume(TokenKind::Assign) {

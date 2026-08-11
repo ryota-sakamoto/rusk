@@ -1,4 +1,6 @@
-use std::{env::args, fs};
+use std::{env::args, fs, path::Path};
+
+use crate::ast::Program;
 
 mod ast;
 mod code;
@@ -11,11 +13,25 @@ fn main() {
         panic!("args should be specified.");
     }
 
-    let p = fs::read_to_string(&args[1]).unwrap();
+    let original_path = Path::new(&args[1]);
+    let base_dir = original_path.parent().unwrap();
+    let original_file = Path::new(original_path.file_name().unwrap());
+
+    let mut program = new_program(base_dir, original_file);
+    for m in &program.mods {
+        let mod_program = new_program(base_dir, Path::new(&format!("{m}.rs")));
+        program.functions.extend(mod_program.functions);
+    }
+
+    semantic::analyze(&program);
+    code::generate(&program);
+}
+
+fn new_program(base: &Path, p: &Path) -> Program {
+    let file_name = base.join(p);
+    let p = fs::read_to_string(file_name).unwrap();
 
     let tokens = token::tokenize(&p);
     let mut parser = ast::Parser::new(&tokens);
-    let program = parser.program();
-    semantic::analyze(&program);
-    code::generate(&program);
+    parser.program()
 }

@@ -8,9 +8,11 @@ pub enum TokenKind {
     RParen,
     LBrace,
     RBrace,
+    Mod,
     Fn,
     Semi,
     Colon,
+    ColonColon,
     Ret,
     Let,
     Mut,
@@ -71,7 +73,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '{' => push_token(TokenKind::LBrace),
             '}' => push_token(TokenKind::RBrace),
             ';' => push_token(TokenKind::Semi),
-            ':' => push_token(TokenKind::Colon),
+            ':' => {
+                if chars.next_if_eq(&':').is_some() {
+                    push_token(TokenKind::ColonColon);
+                } else {
+                    push_token(TokenKind::Colon);
+                }
+            }
             '=' => {
                 if chars.next_if(|c2| *c2 == '=').is_some() {
                     push_token(TokenKind::Eq);
@@ -134,6 +142,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
 
                 match identifier.as_str() {
+                    "mod" => push_token(TokenKind::Mod),
                     "fn" => push_token(TokenKind::Fn),
                     "return" => push_token(TokenKind::Ret),
                     "let" => push_token(TokenKind::Let),
