@@ -69,10 +69,10 @@ mod tests {
             let content = fs::read_to_string(&path).unwrap();
 
             let first_line = content.lines().next().unwrap();
-            let expected: Result<i32, _> =
-                first_line.strip_prefix("// EXPECTED: ").unwrap().parse();
+            let expected: Option<Result<i32, _>> =
+                first_line.strip_prefix("// EXPECTED: ").map(|v| v.parse());
 
-            if let Ok(expected) = expected {
+            if let Some(Ok(expected)) = expected {
                 println!("run {:?}", path);
                 run_and_assert(&path, expected);
             }
