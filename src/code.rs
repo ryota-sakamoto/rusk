@@ -1,5 +1,5 @@
 use core::panic;
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 use crate::ast::{ComparisonType, Function, Node, Program};
 
@@ -83,12 +83,13 @@ pub enum Type {
     Ptr(Box<Type>),
 }
 
-impl From<&str> for Type {
-    fn from(value: &str) -> Self {
+impl FromStr for Type {
+    type Err = ();
+    fn from_str(value: &str) -> Result<Self, ()> {
         match value {
-            "i32" => Type::Int,
-            "i8" => Type::Int8,
-            "bool" => Type::Bool,
+            "i32" => Ok(Type::Int),
+            "i8" => Ok(Type::Int8),
+            "bool" => Ok(Type::Bool),
             _ => panic!("not supported: {value}"),
         }
     }
@@ -160,7 +161,7 @@ impl<'a> GenerateFunction<'a> {
 
         for arg in self.function.args.iter() {
             let arg_reg = self.new_reg();
-            let ty = Type::from(arg.ty.as_str());
+            let ty: Type = arg.ty.parse().unwrap();
             regs.push(format!("{ty} %r{arg_reg}"));
 
             let reg = self.new_reg();
@@ -170,7 +171,7 @@ impl<'a> GenerateFunction<'a> {
                 &arg.name,
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Ptr(Box::new(Type::from(arg.ty.as_str()))),
+                    ty: Type::Ptr(Box::new(ty)),
                 },
             );
         }
@@ -320,13 +321,13 @@ impl<'a> GenerateFunction<'a> {
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::from(fn_ty),
+                    ty: fn_ty.parse().unwrap(),
                 }
             }
             Node::Let(name, ty, right, _) => {
                 let reg = self.new_reg();
                 let r = self.generate_node(right);
-                let let_ty = Type::from(ty.clone().unwrap_or("i32".to_owned()).as_str());
+                let let_ty = ty.clone().map_or(Type::Int, |t| t.parse().unwrap());
 
                 println!("  %r{reg} = alloca {let_ty}");
                 println!("  store {let_ty} {}, ptr %r{}", r.name, reg);
