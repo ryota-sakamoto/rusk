@@ -75,7 +75,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 self.analyze_node(l);
                 self.analyze_node(r);
             }
-            Node::Let(name, node, is_mut) => {
+            Node::Let(name, _, node, is_mut) => {
                 self.analyze_node(node);
                 self.map.insert(name, *is_mut);
             }
@@ -179,6 +179,7 @@ mod tests {
                 args: Vec::new(),
                 body: Node::Block(vec![Node::Let(
                     "a".to_owned(),
+                    None,
                     Box::new(Node::Add(
                         Box::new(Node::RLet("b".to_owned())),
                         Box::new(Node::Num(1)),
@@ -198,7 +199,7 @@ mod tests {
                 name: "main".to_owned(),
                 args: Vec::new(),
                 body: Node::Block(vec![
-                    Node::Let("a".to_owned(), Box::new(Node::Num(1)), false),
+                    Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), false),
                     Node::Assign("a".to_owned(), Box::new(Node::Num(3))),
                 ]),
                 ty: "void".to_owned(),

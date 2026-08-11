@@ -315,17 +315,19 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::from(fn_ty),
                 }
             }
-            Node::Let(name, right, _) => {
+            Node::Let(name, ty, right, _) => {
                 let reg = self.new_reg();
                 let r = self.generate_node(right);
-                println!("  %r{reg} = alloca i32");
-                println!("  store i32 {}, ptr %r{}", r.name, reg);
+                let let_ty = ty.clone().unwrap_or("i32".to_owned());
+
+                println!("  %r{reg} = alloca {let_ty}");
+                println!("  store {let_ty} {}, ptr %r{}", r.name, reg);
 
                 self.map.insert(
                     name,
                     Value {
                         name: format!("%r{reg}"),
-                        ty: Type::Ptr(Box::new(Type::Int)),
+                        ty: Type::Ptr(Box::new(Type::from(let_ty.as_str()))),
                     },
                 );
 
