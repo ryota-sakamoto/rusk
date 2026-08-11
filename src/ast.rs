@@ -42,6 +42,7 @@ pub enum Node {
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     While(Box<Node>, Box<Node>),
     Block(Vec<Node>),
+    Not(Box<Node>),
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -303,6 +304,8 @@ impl<'a> Parser<'a> {
             // noop
         } else if self.consume(TokenKind::Minus) {
             return Node::Sub(Box::new(Node::Num(0)), Box::new(self.primary()));
+        } else if self.consume(TokenKind::Not) {
+            return Node::Not(Box::new(self.primary()));
         }
 
         self.primary()

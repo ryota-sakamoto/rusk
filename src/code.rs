@@ -467,6 +467,16 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Int,
                 }
             }
+            Node::Not(node) => {
+                let ln = self.generate_node(node);
+                let reg = self.new_reg();
+                println!("  %r{} = xor i1 {}, 1", reg, ln.name);
+
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Bool,
+                }
+            }
             Node::Block(body) => {
                 for node in body {
                     self.generate_node(node);

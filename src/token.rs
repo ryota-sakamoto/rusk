@@ -30,6 +30,7 @@ pub enum TokenKind {
     Else,
     Arrow,
     While,
+    Not,
     Identifier(String),
     Num(i32),
     String(String),
@@ -90,6 +91,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '!' => {
                 if chars.next_if_eq(&'=').is_some() {
                     push_token(TokenKind::Ne);
+                } else {
+                    push_token(TokenKind::Not);
                 }
             }
             '<' => {
