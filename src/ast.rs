@@ -107,18 +107,20 @@ impl<'a> Parser<'a> {
         let mut mods = Vec::new();
         let mut functions = Vec::new();
 
-        while self.consume(TokenKind::Mod) {
-            let identifier = self.identifier().expect("should be identifier");
-            if !self.consume(TokenKind::Semi) {
-                panic!("should be TokenKind::Semi");
+        loop {
+            if self.consume(TokenKind::Mod) {
+                let identifier = self.identifier().expect("should be identifier");
+                if !self.consume(TokenKind::Semi) {
+                    panic!("should be TokenKind::Semi");
+                }
+
+                mods.push(identifier);
+            } else if self.consume(TokenKind::Fn) {
+                let f = self.function();
+                functions.push(f);
+            } else {
+                break;
             }
-
-            mods.push(identifier);
-        }
-
-        while self.consume(TokenKind::Fn) {
-            let f = self.function();
-            functions.push(f);
         }
 
         Program { mods, functions }
