@@ -29,6 +29,7 @@ pub enum Node {
     Div(Box<Node>, Box<Node>),
     Num(i32),
     String(String),
+    Bool(bool),
     Ret(Box<Node>),
     Let(String, Option<String>, Box<Node>, bool),
     RLet(String),
@@ -327,6 +328,7 @@ impl<'a> Parser<'a> {
         let parsed_node = match self.current().map(|t| &t.kind) {
             Some(TokenKind::Num(n)) => Some(Node::Num(*n)),
             Some(TokenKind::String(s)) => Some(Node::String(s.clone())),
+            Some(TokenKind::Bool(b)) => Some(Node::Bool(*b)),
             _ => None,
         };
 

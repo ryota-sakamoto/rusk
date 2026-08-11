@@ -31,6 +31,7 @@ pub enum TokenKind {
     Identifier(String),
     Num(i32),
     String(String),
+    Bool(bool),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -140,6 +141,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "if" => push_token(TokenKind::If),
                     "else" => push_token(TokenKind::Else),
                     "while" => push_token(TokenKind::While),
+                    "true" => push_token(TokenKind::Bool(true)),
+                    "false" => push_token(TokenKind::Bool(false)),
                     _ => push_token(TokenKind::Identifier(identifier)),
                 }
             }

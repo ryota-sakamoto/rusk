@@ -79,6 +79,7 @@ impl<'a> Generator<'a> {
 pub enum Type {
     Int,
     Int8,
+    Bool,
     Ptr(Box<Type>),
 }
 
@@ -87,6 +88,7 @@ impl From<&str> for Type {
         match value {
             "i32" => Type::Int,
             "i8" => Type::Int8,
+            "bool" => Type::Bool,
             _ => panic!("not supported: {value}"),
         }
     }
@@ -100,6 +102,7 @@ impl Display for Type {
             match self {
                 Type::Int => "i32",
                 Type::Int8 => "i8",
+                Type::Bool => "i1",
                 Type::Ptr(_) => "ptr",
             }
         )
@@ -157,11 +160,12 @@ impl<'a> GenerateFunction<'a> {
 
         for arg in self.function.args.iter() {
             let arg_reg = self.new_reg();
-            regs.push(format!("{} %r{arg_reg}", arg.ty));
+            let ty = Type::from(arg.ty.as_str());
+            regs.push(format!("{ty} %r{arg_reg}"));
 
             let reg = self.new_reg();
-            entry_instructions.push(format!("  %r{reg} = alloca {}", arg.ty));
-            entry_instructions.push(format!("  store {} %r{arg_reg}, ptr %r{reg}", arg.ty));
+            entry_instructions.push(format!("  %r{reg} = alloca {ty}"));
+            entry_instructions.push(format!("  store {ty} %r{arg_reg}, ptr %r{reg}"));
             self.map.insert(
                 &arg.name,
                 Value {
@@ -274,6 +278,10 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Ptr(Box::new(Type::Int)),
                 }
             }
+            Node::Bool(b) => Value {
+                name: (*b as i32).to_string(),
+                ty: Type::Bool,
+            },
             Node::Ret(n) => {
                 self.has_return = true;
                 let ret = self.generate_node(n);
@@ -318,7 +326,7 @@ impl<'a> GenerateFunction<'a> {
             Node::Let(name, ty, right, _) => {
                 let reg = self.new_reg();
                 let r = self.generate_node(right);
-                let let_ty = ty.clone().unwrap_or("i32".to_owned());
+                let let_ty = Type::from(ty.clone().unwrap_or("i32".to_owned()).as_str());
 
                 println!("  %r{reg} = alloca {let_ty}");
                 println!("  store {let_ty} {}, ptr %r{}", r.name, reg);
@@ -327,7 +335,7 @@ impl<'a> GenerateFunction<'a> {
                     name,
                     Value {
                         name: format!("%r{reg}"),
-                        ty: Type::Ptr(Box::new(Type::from(let_ty.as_str()))),
+                        ty: Type::Ptr(Box::new(let_ty)),
                     },
                 );
 
