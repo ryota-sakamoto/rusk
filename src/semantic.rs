@@ -114,6 +114,17 @@ impl<'a> FunctionAnalyzer<'a> {
                     panic!("{:?} should be mut", s);
                 }
             }
+            Node::If(l, r, e) => {
+                self.analyze_node(l);
+                self.analyze_node(r);
+                if let Some(e) = e {
+                    self.analyze_node(e);
+                }
+            }
+            Node::Comparison(_, l, r) => {
+                self.analyze_node(l);
+                self.analyze_node(r);
+            }
             Node::While(l, r) => {
                 self.analyze_node(l);
                 self.analyze_node(r);
@@ -210,6 +221,29 @@ mod tests {
                     Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), false),
                     Node::Assign("a".to_owned(), Box::new(Node::Num(3))),
                 ]),
+                ty: "void".to_owned(),
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""c" is not defined"#)]
+    fn check_let_existence_if() {
+        analyze(&Program {
+            mods: vec![],
+            structs: vec![],
+            functions: vec![Function {
+                name: "main".to_owned(),
+                args: Vec::new(),
+                body: Node::Block(vec![Node::If(
+                    Box::new(Node::Comparison(
+                        crate::ast::ComparisonType::Eq,
+                        Box::new(Node::RLet("c".to_owned(), None)),
+                        Box::new(Node::Num(10)),
+                    )),
+                    Box::new(Node::Block(vec![])),
+                    None,
+                )]),
                 ty: "void".to_owned(),
             }],
         });
