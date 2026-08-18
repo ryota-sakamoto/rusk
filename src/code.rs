@@ -366,16 +366,38 @@ impl<'a> GenerateFunction<'a> {
 
                 r
             }
-            Node::RLet(name) => {
+            Node::RLet(name, field) => {
                 let reg = self.new_reg();
                 let r = self.map.get(name.as_str()).unwrap();
                 let inner_ty = r.ty.inner();
-                println!("  %r{reg} = load {}, ptr {}", inner_ty, r.name);
 
-                Value {
+                if let Some(field) = field {
+                    let field_map = self
+                        .struct_map
+                        .get(inner_ty.to_string().strip_prefix("%").unwrap())
+                        .unwrap();
+                    let field_index = field_map[field.as_str()];
+
+                    println!(
+                        "  %r{reg} = getelementptr {}, ptr {}, i32 0, i32 {field_index}",
+                        inner_ty, r.name,
+                    );
+
+                    let field_reg = self.new_reg();
+                    println!("  %r{field_reg} = load i32, ptr %r{reg}");
+
+                    // TODO: use field type
+                    return Value {
+                        name: format!("%r{field_reg}"),
+                        ty: Type::Int,
+                    };
+                }
+
+                println!("  %r{reg} = load {}, ptr {}", inner_ty, r.name);
+                return Value {
                     name: format!("%r{reg}"),
                     ty: inner_ty.clone(),
-                }
+                };
             }
             Node::Assign(name, r) => {
                 let rn = self.generate_node(r);

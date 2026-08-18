@@ -79,7 +79,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 self.analyze_node(node);
                 self.map.insert(name, *is_mut);
             }
-            Node::RLet(name) => {
+            Node::RLet(name, _) => {
                 if !self.map.contains_key(&name.as_str()) {
                     panic!("{:?} is not defined", name);
                 }
@@ -187,7 +187,7 @@ mod tests {
                     "a".to_owned(),
                     None,
                     Box::new(Node::Add(
-                        Box::new(Node::RLet("b".to_owned())),
+                        Box::new(Node::RLet("b".to_owned(), None)),
                         Box::new(Node::Num(1)),
                     )),
                     false,
