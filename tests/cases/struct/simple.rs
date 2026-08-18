@@ -6,6 +6,6 @@ struct Test {
 }
 
 fn main() {
-    let test: Test = Test { a: 1, c: 3, b: 2 };
+    let test = Test { a: 1, c: 3, b: 2 };
     printf("%d", test.a + test.b * test.c);
 }

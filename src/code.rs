@@ -350,7 +350,10 @@ impl<'a> GenerateFunction<'a> {
             }
             Node::Let(name, ty, right, _) => {
                 let r = self.generate_node(right);
-                let let_ty = ty.clone().map_or(Type::Int, |t| t.parse().unwrap());
+                let let_ty = match ty {
+                    Some(ty) => ty.parse().unwrap(),
+                    _ => r.ty.clone(),
+                };
 
                 let reg = self.new_reg();
                 println!("  %r{reg} = alloca {let_ty}");
