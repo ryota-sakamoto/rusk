@@ -65,11 +65,30 @@ impl<'a> Generator<'a> {
             );
         }
 
+        let mut struct_map = HashMap::new();
+        for s in &self.program.structs {
+            let fields = s
+                .fields
+                .iter()
+                .map(|v| v.ty.as_str())
+                .collect::<Vec<&str>>()
+                .join(", ");
+            println!("%{} = type {{{fields}}}", s.name);
+
+            let mut fields_map = HashMap::new();
+            for (index, field) in s.fields.iter().enumerate() {
+                fields_map.insert(field.name.as_str(), index);
+            }
+
+            struct_map.insert(s.name.as_str(), fields_map);
+        }
+
         println!("declare i32 @printf(ptr, ...)");
 
         for f in self.program.functions.iter() {
             println!();
-            let generator = GenerateFunction::new(f, &self.string_map, &self.function_map);
+            let generator =
+                GenerateFunction::new(f, &self.string_map, &self.function_map, &struct_map);
             generator.generate();
         }
     }
@@ -81,6 +100,7 @@ pub enum Type {
     Int8,
     Bool,
     Ptr(Box<Type>),
+    Struct(String),
 }
 
 impl FromStr for Type {
@@ -90,7 +110,7 @@ impl FromStr for Type {
             "i32" => Ok(Type::Int),
             "i8" => Ok(Type::Int8),
             "bool" => Ok(Type::Bool),
-            _ => panic!("not supported: {value}"),
+            _ => Ok(Type::Struct(value.to_owned())),
         }
     }
 }
@@ -101,10 +121,11 @@ impl Display for Type {
             f,
             "{}",
             match self {
-                Type::Int => "i32",
-                Type::Int8 => "i8",
-                Type::Bool => "i1",
-                Type::Ptr(_) => "ptr",
+                Type::Int => "i32".to_owned(),
+                Type::Int8 => "i8".to_owned(),
+                Type::Bool => "i1".to_owned(),
+                Type::Ptr(_) => "ptr".to_owned(),
+                Type::Struct(name) => format!("%{name}"),
             }
         )
     }
@@ -131,6 +152,7 @@ struct GenerateFunction<'a> {
     map: HashMap<&'a str, Value>,
     string_map: &'a HashMap<&'a str, String>,
     function_map: &'a HashMap<&'a str, &'a str>,
+    struct_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     has_return: bool,
 }
 
@@ -139,6 +161,7 @@ impl<'a> GenerateFunction<'a> {
         function: &'a Function,
         string_map: &'a HashMap<&'a str, String>,
         function_map: &'a HashMap<&'a str, &'a str>,
+        struct_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     ) -> Self {
         Self {
             function,
@@ -147,6 +170,7 @@ impl<'a> GenerateFunction<'a> {
             map: HashMap::new(),
             string_map,
             function_map,
+            struct_map,
             has_return: false,
         }
     }
@@ -325,10 +349,10 @@ impl<'a> GenerateFunction<'a> {
                 }
             }
             Node::Let(name, ty, right, _) => {
-                let reg = self.new_reg();
                 let r = self.generate_node(right);
                 let let_ty = ty.clone().map_or(Type::Int, |t| t.parse().unwrap());
 
+                let reg = self.new_reg();
                 println!("  %r{reg} = alloca {let_ty}");
                 println!("  store {let_ty} {}, ptr %r{}", r.name, reg);
 
@@ -485,6 +509,28 @@ impl<'a> GenerateFunction<'a> {
                 Value {
                     name: String::new(),
                     ty: Type::Int,
+                }
+            }
+            Node::Struct(name, args) => {
+                let reg = self.new_reg();
+                println!("  %r{reg} = alloca %{name}");
+
+                for (a, n) in args {
+                    let r = self.generate_node(n);
+                    let field_reg = self.new_reg();
+                    let field_index = self.struct_map[name.as_str()][a.as_str()];
+                    println!(
+                        "  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 {field_index}"
+                    );
+                    println!("  store {} {}, ptr %r{field_reg}", r.ty, r.name);
+                }
+
+                let val_reg = self.new_reg();
+                println!("  %r{val_reg} = load %{name}, ptr %r{reg}");
+
+                Value {
+                    name: format!("%r{val_reg}"),
+                    ty: Type::Struct(name.clone()),
                 }
             }
         }

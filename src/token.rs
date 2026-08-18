@@ -31,6 +31,8 @@ pub enum TokenKind {
     Arrow,
     While,
     Not,
+    Struct,
+    Dot,
     Identifier(String),
     Num(i32),
     String(String),
@@ -128,6 +130,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 chars.next();
                 push_token(TokenKind::String(s));
             }
+            '.' => push_token(TokenKind::Dot),
             n if n.is_numeric() => {
                 let mut num = 0;
                 num += n.to_digit(10).unwrap();
@@ -155,6 +158,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "while" => push_token(TokenKind::While),
                     "true" => push_token(TokenKind::Bool(true)),
                     "false" => push_token(TokenKind::Bool(false)),
+                    "struct" => push_token(TokenKind::Struct),
                     _ => push_token(TokenKind::Identifier(identifier)),
                 }
             }

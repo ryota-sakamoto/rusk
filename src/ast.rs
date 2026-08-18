@@ -1,4 +1,5 @@
 use core::panic;
+use std::collections::BTreeMap;
 
 use crate::token::{Token, TokenKind};
 
@@ -6,6 +7,7 @@ use crate::token::{Token, TokenKind};
 pub struct Program {
     pub mods: Vec<String>,
     pub functions: Vec<Function>,
+    pub structs: Vec<StructType>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -14,6 +16,12 @@ pub struct Function {
     pub args: Vec<Arg>,
     pub body: Node,
     pub ty: String,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct StructType {
+    pub name: String,
+    pub fields: Vec<Arg>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -43,6 +51,7 @@ pub enum Node {
     While(Box<Node>, Box<Node>),
     Block(Vec<Node>),
     Not(Box<Node>),
+    Struct(String, BTreeMap<String, Node>),
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -58,11 +67,16 @@ pub enum ComparisonType {
 pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
     pos: usize,
+    allow_struct: bool,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: &'a Vec<Token>) -> Self {
-        Self { tokens, pos: 0 }
+        Self {
+            tokens,
+            pos: 0,
+            allow_struct: true,
+        }
     }
 
     fn current(&self) -> Option<&Token> {
@@ -106,6 +120,7 @@ impl<'a> Parser<'a> {
     pub fn program(&mut self) -> Program {
         let mut mods = Vec::new();
         let mut functions = Vec::new();
+        let mut structs = Vec::new();
 
         loop {
             if self.consume(TokenKind::Mod) {
@@ -118,12 +133,18 @@ impl<'a> Parser<'a> {
             } else if self.consume(TokenKind::Fn) {
                 let f = self.function();
                 functions.push(f);
+            } else if self.consume(TokenKind::Struct) {
+                structs.push(self.struct_type());
             } else {
                 break;
             }
         }
 
-        Program { mods, functions }
+        Program {
+            mods,
+            functions,
+            structs,
+        }
     }
 
     fn function(&mut self) -> Function {
@@ -163,9 +184,35 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn struct_type(&mut self) -> StructType {
+        let name = self.identifier().expect("should be identifier");
+        if !self.consume(TokenKind::LBrace) {
+            panic!("should be TokenKind::LBrace");
+        }
+
+        let mut fields = Vec::new();
+        while !self.consume(TokenKind::RBrace) {
+            let name = self.identifier().expect("should be identifier");
+            if !self.consume(TokenKind::Colon) {
+                panic!("should be TokenKind::COLON");
+            }
+
+            let ty = self.identifier().expect("should be identifier");
+
+            self.consume(TokenKind::Comma);
+
+            fields.push(Arg { name, ty });
+        }
+
+        StructType { name, fields }
+    }
+
     fn stmt(&mut self) -> Node {
         if self.consume(TokenKind::If) {
+            let prev_allow_struct = self.allow_struct;
+            self.allow_struct = false;
             let node = self.expr();
+            self.allow_struct = prev_allow_struct;
 
             let body = self.block();
             let ebody = if self.consume(TokenKind::Else) {
@@ -331,6 +378,23 @@ impl<'a> Parser<'a> {
 
                 // TODO: use mod name
                 return Node::Call(mod_function.unwrap_or(identifier), args);
+            }
+
+            if self.allow_struct && self.consume(TokenKind::LBrace) {
+                let mut fields = BTreeMap::new();
+                while !self.consume(TokenKind::RBrace) {
+                    let name = self.identifier().expect("should be identifier");
+                    if !self.consume(TokenKind::Colon) {
+                        panic!("should be TokenKind::COLON");
+                    }
+
+                    let value = self.expr();
+                    self.consume(TokenKind::Comma);
+
+                    fields.insert(name, value);
+                }
+
+                return Node::Struct(identifier, fields);
             }
 
             if self.consume(TokenKind::Assign) {

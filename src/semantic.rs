@@ -140,6 +140,7 @@ mod tests {
     fn check_main() {
         analyze(&Program {
             mods: vec![],
+            structs: vec![],
             functions: Vec::new(),
         });
     }
@@ -149,6 +150,7 @@ mod tests {
     fn check_duplicated_function() {
         analyze(&Program {
             mods: vec![],
+            structs: vec![],
             functions: vec![
                 Function {
                     name: "f".to_owned(),
@@ -177,6 +179,7 @@ mod tests {
     fn check_let_existence() {
         analyze(&Program {
             mods: vec![],
+            structs: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -199,6 +202,7 @@ mod tests {
     fn check_mut() {
         analyze(&Program {
             mods: vec![],
+            structs: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
