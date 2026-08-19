@@ -2,18 +2,18 @@
 mod tests {
     use std::{
         env, fs,
-        path::Path,
         process::{Command, Stdio},
     };
 
-    fn run_and_assert(path: &Path, expected: i32) {
+    fn run_and_assert(path: &str, expected: i32) {
         let dir = env::temp_dir();
 
         let mut ll_path = dir.clone();
-        ll_path.push("test.ll");
+        let file_name = path.replace("/", "_");
+        ll_path.push(format!("{file_name}.ll"));
 
         let output = Command::new("cargo")
-            .args(&["run", "--quiet", "--", &path.to_string_lossy()])
+            .args(&["run", "--quiet", "--", path])
             .stderr(Stdio::inherit())
             .output()
             .expect("Failed to execute compiler");
@@ -24,9 +24,10 @@ mod tests {
         fs::write(&ll_path, ll_code).expect("Failed to write .ll file");
 
         let mut exe_path = dir.clone();
-        exe_path.push("test.out");
+        exe_path.push(format!("{file_name}.out"));
 
         let clang_status = Command::new("clang")
+            .arg("-Wno-override-module")
             .arg(&ll_path)
             .arg("-o")
             .arg(&exe_path)
@@ -45,37 +46,5 @@ mod tests {
         assert_eq!(a, expected);
     }
 
-    fn collect_rs_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
-        if let Ok(entries) = fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    collect_rs_files(&path, files);
-                } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                    files.push(path);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_return_numbers() {
-        let cases_dir = Path::new("tests/cases");
-        let mut entries = Vec::new();
-        collect_rs_files(cases_dir, &mut entries);
-        entries.sort();
-
-        for path in entries {
-            let content = fs::read_to_string(&path).unwrap();
-
-            let first_line = content.lines().next().unwrap();
-            let expected: Option<Result<i32, _>> =
-                first_line.strip_prefix("// EXPECTED: ").map(|v| v.parse());
-
-            if let Some(Ok(expected)) = expected {
-                println!("run {:?}", path);
-                run_and_assert(&path, expected);
-            }
-        }
-    }
+    include!("generated/tests.rs");
 }

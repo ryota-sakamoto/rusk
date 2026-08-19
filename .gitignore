@@ -1,3 +1,4 @@
 /target
 a.out
 test.ll
+tests/generated/tests.rs
