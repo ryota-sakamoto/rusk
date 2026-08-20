@@ -70,14 +70,20 @@ impl<'a> Generator<'a> {
             let fields = s
                 .fields
                 .iter()
-                .map(|v| v.ty.as_str())
-                .collect::<Vec<&str>>()
+                .map(|v| format!("{}", Type::from_str(v.ty.as_str()).unwrap()))
+                .collect::<Vec<String>>()
                 .join(", ");
             println!("%{} = type {{{fields}}}", s.name);
 
             let mut fields_map = HashMap::new();
             for (index, field) in s.fields.iter().enumerate() {
-                fields_map.insert(field.name.as_str(), index);
+                fields_map.insert(
+                    field.name.as_str(),
+                    StructField {
+                        ty: Type::from_str(&field.ty).unwrap(),
+                        index,
+                    },
+                );
             }
 
             struct_map.insert(s.name.as_str(), fields_map);
@@ -145,6 +151,11 @@ struct Value {
     ty: Type,
 }
 
+struct StructField {
+    ty: Type,
+    index: usize,
+}
+
 struct GenerateFunction<'a> {
     function: &'a Function,
     index: u64,
@@ -152,7 +163,7 @@ struct GenerateFunction<'a> {
     map: HashMap<&'a str, Value>,
     string_map: &'a HashMap<&'a str, String>,
     function_map: &'a HashMap<String, &'a str>,
-    struct_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
+    struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
     has_return: bool,
 }
 
@@ -161,7 +172,7 @@ impl<'a> GenerateFunction<'a> {
         function: &'a Function,
         string_map: &'a HashMap<&'a str, String>,
         function_map: &'a HashMap<String, &'a str>,
-        struct_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
+        struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
     ) -> Self {
         Self {
             function,
@@ -379,20 +390,19 @@ impl<'a> GenerateFunction<'a> {
                         .struct_map
                         .get(inner_ty.to_string().strip_prefix("%").unwrap())
                         .unwrap();
-                    let field_index = field_map[field.as_str()];
+                    let struct_field = &field_map[field.as_str()];
 
                     println!(
-                        "  %r{reg} = getelementptr {}, ptr {}, i32 0, i32 {field_index}",
-                        inner_ty, r.name,
+                        "  %r{reg} = getelementptr {}, ptr {}, i32 0, i32 {}",
+                        inner_ty, r.name, struct_field.index,
                     );
 
                     let field_reg = self.new_reg();
-                    println!("  %r{field_reg} = load i32, ptr %r{reg}");
+                    println!("  %r{field_reg} = load {}, ptr %r{reg}", struct_field.ty);
 
-                    // TODO: use field type
                     return Value {
                         name: format!("%r{field_reg}"),
-                        ty: Type::Int,
+                        ty: struct_field.ty.clone(),
                     };
                 }
 
@@ -543,9 +553,10 @@ impl<'a> GenerateFunction<'a> {
                 for (a, n) in args {
                     let r = self.generate_node(n);
                     let field_reg = self.new_reg();
-                    let field_index = self.struct_map[name.as_str()][a.as_str()];
+                    let struct_field = &self.struct_map[name.as_str()][a.as_str()];
                     println!(
-                        "  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 {field_index}"
+                        "  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 {}",
+                        struct_field.index,
                     );
                     println!("  store {} {}, ptr %r{field_reg}", r.ty, r.name);
                 }
