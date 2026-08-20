@@ -134,13 +134,32 @@ impl<'a> FunctionAnalyzer<'a> {
                     self.analyze_node(v);
                 }
             }
-            _ => {}
+            Node::Ret(r) => {
+                self.analyze_node(r);
+            }
+            Node::And(l, r) | Node::Or(l, r) => {
+                self.analyze_node(l);
+                self.analyze_node(r);
+            }
+            Node::Not(r) => {
+                self.analyze_node(r);
+            }
+            Node::Struct(_, fields) => {
+                for f in fields.values() {
+                    self.analyze_node(f);
+                }
+            }
+            Node::Num(_) | Node::String(_) | Node::Bool(_) => {
+                // noop
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use crate::{
         ast::{Function, Node, Program},
         semantic::analyze,
@@ -248,6 +267,41 @@ mod tests {
                     )),
                     Box::new(Node::Block(vec![])),
                     None,
+                )]),
+                ty: "void".to_owned(),
+                mod_name: None,
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""d" is not defined"#)]
+    fn check_let_existence_return() {
+        analyze(&Program {
+            mods: vec![],
+            structs: vec![],
+            functions: vec![Function {
+                name: "main".to_owned(),
+                args: Vec::new(),
+                body: Node::Block(vec![Node::Ret(Box::new(Node::RLet("d".to_owned(), None)))]),
+                ty: "void".to_owned(),
+                mod_name: None,
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""e" is not defined"#)]
+    fn check_let_existence_struct() {
+        analyze(&Program {
+            mods: vec![],
+            structs: vec![],
+            functions: vec![Function {
+                name: "main".to_owned(),
+                args: Vec::new(),
+                body: Node::Block(vec![Node::Struct(
+                    "Test".to_owned(),
+                    BTreeMap::from([("a".to_owned(), Node::RLet("e".to_owned(), None))]),
                 )]),
                 ty: "void".to_owned(),
                 mod_name: None,
