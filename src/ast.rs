@@ -16,6 +16,19 @@ pub struct Function {
     pub args: Vec<Arg>,
     pub body: Node,
     pub ty: String,
+    pub mod_name: Option<String>,
+}
+
+impl Function {
+    pub fn full_name(&self) -> String {
+        format!(
+            "{}{}",
+            self.mod_name
+                .clone()
+                .map_or("".to_owned(), |mod_name| format!("{mod_name}::")),
+            self.name
+        )
+    }
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -68,14 +81,16 @@ pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
     pos: usize,
     allow_struct: bool,
+    mod_name: Option<String>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a Vec<Token>) -> Self {
+    pub fn new(tokens: &'a Vec<Token>, mod_name: Option<String>) -> Self {
         Self {
             tokens,
             pos: 0,
             allow_struct: true,
+            mod_name,
         }
     }
 
@@ -181,6 +196,7 @@ impl<'a> Parser<'a> {
             args,
             body,
             ty,
+            mod_name: self.mod_name.clone(),
         }
     }
 
@@ -376,8 +392,13 @@ impl<'a> Parser<'a> {
                     self.consume(TokenKind::Comma);
                 }
 
-                // TODO: use mod name
-                return Node::Call(mod_function.unwrap_or(identifier), args);
+                return Node::Call(
+                    format!(
+                        "{identifier}{}",
+                        mod_function.map_or(String::new(), |v| format!("::{v}"))
+                    ),
+                    args,
+                );
             }
 
             if self.allow_struct && self.consume(TokenKind::LBrace) {
@@ -488,7 +509,7 @@ mod tests {
         ];
 
         for (tokens, expected) in tests {
-            let mut parser = Parser::new(&tokens);
+            let mut parser = Parser::new(&tokens, None);
             assert_eq!(parser.expr(), expected);
         }
     }
@@ -528,7 +549,7 @@ mod tests {
         ];
 
         for (tokens, expected) in tests {
-            let mut parser = Parser::new(&tokens);
+            let mut parser = Parser::new(&tokens, None);
             assert_eq!(parser.primary(), expected);
         }
     }

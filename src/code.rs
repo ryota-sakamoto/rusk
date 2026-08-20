@@ -11,7 +11,7 @@ pub fn generate(program: &Program) {
 
 struct Generator<'a> {
     string_map: HashMap<&'a str, String>,
-    function_map: HashMap<&'a str, &'a str>,
+    function_map: HashMap<String, &'a str>,
     string_index: u64,
     program: &'a Program,
 }
@@ -27,10 +27,10 @@ impl<'a> Generator<'a> {
     }
 
     fn parse(&mut self) {
-        self.function_map.insert("printf", "i32");
+        self.function_map.insert("printf".to_owned(), "i32");
         for f in &self.program.functions {
             self.parse_node(&f.body);
-            self.function_map.insert(&f.name, &f.ty);
+            self.function_map.insert(f.full_name(), &f.ty);
         }
     }
 
@@ -151,7 +151,7 @@ struct GenerateFunction<'a> {
     label: u64,
     map: HashMap<&'a str, Value>,
     string_map: &'a HashMap<&'a str, String>,
-    function_map: &'a HashMap<&'a str, &'a str>,
+    function_map: &'a HashMap<String, &'a str>,
     struct_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     has_return: bool,
 }
@@ -160,7 +160,7 @@ impl<'a> GenerateFunction<'a> {
     fn new(
         function: &'a Function,
         string_map: &'a HashMap<&'a str, String>,
-        function_map: &'a HashMap<&'a str, &'a str>,
+        function_map: &'a HashMap<String, &'a str>,
         struct_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     ) -> Self {
         Self {
@@ -201,13 +201,13 @@ impl<'a> GenerateFunction<'a> {
         }
 
         println!(
-            "define {} @{}({}) {{",
+            "define {} @\"{}\"({}) {{",
             if self.is_main() {
                 "i32"
             } else {
                 self.function.ty.as_str()
             },
-            self.function.name,
+            self.function.full_name(),
             regs.into_iter().collect::<Vec<String>>().join(", "),
         );
         println!("entry:");
@@ -329,7 +329,7 @@ impl<'a> GenerateFunction<'a> {
                 let reg = self.new_reg();
                 if !call_args.is_empty() {
                     println!(
-                        "  %r{} = call {} @{}({})",
+                        "  %r{} = call {} @\"{}\"({})",
                         reg,
                         fn_ty,
                         name,
@@ -340,7 +340,7 @@ impl<'a> GenerateFunction<'a> {
                             .join(", ")
                     );
                 } else {
-                    println!("  %r{} = call {} @{}()", reg, fn_ty, name);
+                    println!("  %r{} = call {} @\"{}\"()", reg, fn_ty, name);
                 }
 
                 Value {

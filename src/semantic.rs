@@ -10,7 +10,7 @@ pub fn analyze(program: &Program) {
 
 struct Analyzer<'a> {
     program: &'a Program,
-    functions: HashMap<&'a str, &'a Function>,
+    functions: HashMap<String, &'a Function>,
 }
 
 impl<'a> Analyzer<'a> {
@@ -36,7 +36,7 @@ impl<'a> Analyzer<'a> {
                 panic!("{:?} is duplicated", f.name);
             }
 
-            self.functions.insert(&f.name, f);
+            self.functions.insert(f.full_name(), f);
         }
 
         if !self.functions.contains_key("main") {
@@ -47,12 +47,12 @@ impl<'a> Analyzer<'a> {
 
 struct FunctionAnalyzer<'a> {
     function: &'a Function,
-    functions: &'a HashMap<&'a str, &'a Function>,
+    functions: &'a HashMap<String, &'a Function>,
     map: HashMap<&'a str, bool>,
 }
 
 impl<'a> FunctionAnalyzer<'a> {
-    fn new(function: &'a Function, functions: &'a HashMap<&'a str, &'a Function>) -> Self {
+    fn new(function: &'a Function, functions: &'a HashMap<String, &'a Function>) -> Self {
         let mut map = HashMap::new();
         for arg in &function.args {
             map.insert(arg.name.as_str(), false);
@@ -168,18 +168,21 @@ mod tests {
                     args: Vec::new(),
                     body: Node::Block(vec![]),
                     ty: "void".to_owned(),
+                    mod_name: None,
                 },
                 Function {
                     name: "f".to_owned(),
                     args: Vec::new(),
                     body: Node::Block(vec![]),
                     ty: "void".to_owned(),
+                    mod_name: None,
                 },
                 Function {
                     name: "main".to_owned(),
                     args: Vec::new(),
                     body: Node::Block(vec![]),
                     ty: "void".to_owned(),
+                    mod_name: None,
                 },
             ],
         });
@@ -204,6 +207,7 @@ mod tests {
                     false,
                 )]),
                 ty: "void".to_owned(),
+                mod_name: None,
             }],
         });
     }
@@ -222,6 +226,7 @@ mod tests {
                     Node::Assign("a".to_owned(), Box::new(Node::Num(3))),
                 ]),
                 ty: "void".to_owned(),
+                mod_name: None,
             }],
         });
     }
@@ -245,6 +250,7 @@ mod tests {
                     None,
                 )]),
                 ty: "void".to_owned(),
+                mod_name: None,
             }],
         });
     }

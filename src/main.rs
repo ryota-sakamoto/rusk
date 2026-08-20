@@ -17,9 +17,9 @@ fn main() {
     let base_dir = original_path.parent().unwrap();
     let original_file = Path::new(original_path.file_name().unwrap());
 
-    let mut program = new_program(base_dir, original_file);
+    let mut program = new_program(base_dir, original_file, None);
     for m in &program.mods {
-        let mod_program = new_program(base_dir, Path::new(&format!("{m}.rs")));
+        let mod_program = new_program(base_dir, Path::new(&format!("{m}.rs")), Some(m.clone()));
         program.functions.extend(mod_program.functions);
     }
 
@@ -27,11 +27,11 @@ fn main() {
     code::generate(&program);
 }
 
-fn new_program(base: &Path, p: &Path) -> Program {
+fn new_program(base: &Path, p: &Path, mod_name: Option<String>) -> Program {
     let file_name = base.join(p);
     let p = fs::read_to_string(file_name).unwrap();
 
     let tokens = token::tokenize(&p);
-    let mut parser = ast::Parser::new(&tokens);
+    let mut parser = ast::Parser::new(&tokens, mod_name);
     parser.program()
 }
