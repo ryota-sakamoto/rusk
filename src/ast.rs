@@ -8,6 +8,7 @@ pub struct Program {
     pub mods: Vec<String>,
     pub functions: Vec<Function>,
     pub structs: Vec<StructType>,
+    pub enums: Vec<EnumType>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -38,6 +39,12 @@ pub struct StructType {
 }
 
 #[derive(PartialEq, Eq, Debug)]
+pub struct EnumType {
+    pub name: String,
+    pub variants: Vec<String>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
 pub struct Arg {
     pub name: String,
     pub ty: String,
@@ -65,6 +72,7 @@ pub enum Node {
     Block(Vec<Node>),
     Not(Box<Node>),
     Struct(String, BTreeMap<String, Node>),
+    Enum(String, String),
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -136,6 +144,7 @@ impl<'a> Parser<'a> {
         let mut mods = Vec::new();
         let mut functions = Vec::new();
         let mut structs = Vec::new();
+        let mut enums = Vec::new();
 
         loop {
             if self.consume(TokenKind::Mod) {
@@ -150,6 +159,8 @@ impl<'a> Parser<'a> {
                 functions.push(f);
             } else if self.consume(TokenKind::Struct) {
                 structs.push(self.struct_type());
+            } else if self.consume(TokenKind::Enum) {
+                enums.push(self.enum_type());
             } else {
                 break;
             }
@@ -159,6 +170,7 @@ impl<'a> Parser<'a> {
             mods,
             functions,
             structs,
+            enums,
         }
     }
 
@@ -221,6 +233,22 @@ impl<'a> Parser<'a> {
         }
 
         StructType { name, fields }
+    }
+
+    fn enum_type(&mut self) -> EnumType {
+        let name = self.identifier().expect("should be identifier");
+        if !self.consume(TokenKind::LBrace) {
+            panic!("should be TokenKind::LBrace");
+        }
+
+        let mut variants = Vec::new();
+        while !self.consume(TokenKind::RBrace) {
+            let name = self.identifier().expect("should be identifier");
+            self.consume(TokenKind::Comma);
+            variants.push(name);
+        }
+
+        EnumType { name, variants }
     }
 
     fn stmt(&mut self) -> Node {
@@ -427,6 +455,10 @@ impl<'a> Parser<'a> {
             } else {
                 None
             };
+
+            if let Some(m) = mod_function {
+                return Node::Enum(identifier, m);
+            }
 
             return Node::RLet(identifier, field);
         }

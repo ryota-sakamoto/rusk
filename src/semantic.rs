@@ -149,6 +149,9 @@ impl<'a> FunctionAnalyzer<'a> {
                     self.analyze_node(f);
                 }
             }
+            Node::Enum(_, _) => {
+                // noop
+            }
             Node::Num(_) | Node::String(_) | Node::Bool(_) => {
                 // noop
             }
@@ -171,6 +174,7 @@ mod tests {
         analyze(&Program {
             mods: vec![],
             structs: vec![],
+            enums: vec![],
             functions: Vec::new(),
         });
     }
@@ -181,6 +185,7 @@ mod tests {
         analyze(&Program {
             mods: vec![],
             structs: vec![],
+            enums: vec![],
             functions: vec![
                 Function {
                     name: "f".to_owned(),
@@ -213,6 +218,7 @@ mod tests {
         analyze(&Program {
             mods: vec![],
             structs: vec![],
+            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -237,6 +243,7 @@ mod tests {
         analyze(&Program {
             mods: vec![],
             structs: vec![],
+            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -256,6 +263,7 @@ mod tests {
         analyze(&Program {
             mods: vec![],
             structs: vec![],
+            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -280,6 +288,7 @@ mod tests {
         analyze(&Program {
             mods: vec![],
             structs: vec![],
+            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -296,6 +305,7 @@ mod tests {
         analyze(&Program {
             mods: vec![],
             structs: vec![],
+            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),

@@ -89,12 +89,29 @@ impl<'a> Generator<'a> {
             struct_map.insert(s.name.as_str(), fields_map);
         }
 
+        let mut enum_map = HashMap::new();
+        for e in &self.program.enums {
+            println!("%{} = type {{i32}}", e.name);
+
+            let mut variants_map = HashMap::new();
+            for (index, variant) in e.variants.iter().enumerate() {
+                variants_map.insert(variant.as_str(), index);
+            }
+
+            enum_map.insert(e.name.as_str(), variants_map);
+        }
+
         println!("declare i32 @printf(ptr, ...)");
 
         for f in self.program.functions.iter() {
             println!();
-            let generator =
-                GenerateFunction::new(f, &self.string_map, &self.function_map, &struct_map);
+            let generator = GenerateFunction::new(
+                f,
+                &self.string_map,
+                &self.function_map,
+                &struct_map,
+                &enum_map,
+            );
             generator.generate();
         }
     }
@@ -164,6 +181,7 @@ struct GenerateFunction<'a> {
     string_map: &'a HashMap<&'a str, String>,
     function_map: &'a HashMap<String, &'a str>,
     struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
+    enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     has_return: bool,
 }
 
@@ -173,6 +191,7 @@ impl<'a> GenerateFunction<'a> {
         string_map: &'a HashMap<&'a str, String>,
         function_map: &'a HashMap<String, &'a str>,
         struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
+        enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     ) -> Self {
         Self {
             function,
@@ -182,6 +201,7 @@ impl<'a> GenerateFunction<'a> {
             string_map,
             function_map,
             struct_map,
+            enum_map,
             has_return: false,
         }
     }
@@ -567,6 +587,13 @@ impl<'a> GenerateFunction<'a> {
                 Value {
                     name: format!("%r{val_reg}"),
                     ty: Type::Struct(name.clone()),
+                }
+            }
+            Node::Enum(name, variant) => {
+                let variant_index = self.enum_map[name.as_str()][variant.as_str()];
+                Value {
+                    name: variant_index.to_string(),
+                    ty: Type::Int,
                 }
             }
         }

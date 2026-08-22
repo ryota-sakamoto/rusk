@@ -32,6 +32,7 @@ pub enum TokenKind {
     While,
     Not,
     Struct,
+    Enum,
     Dot,
     Identifier(String),
     Num(i32),
@@ -159,6 +160,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "true" => push_token(TokenKind::Bool(true)),
                     "false" => push_token(TokenKind::Bool(false)),
                     "struct" => push_token(TokenKind::Struct),
+                    "enum" => push_token(TokenKind::Enum),
                     _ => push_token(TokenKind::Identifier(identifier)),
                 }
             }
