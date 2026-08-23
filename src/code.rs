@@ -596,6 +596,49 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Int,
                 }
             }
+            Node::Match(l, r) => {
+                let ln = self.generate_node(l);
+
+                let label = self.new_label();
+                let switch_label = format!("switch_{label}_default");
+
+                let mut switch_labels = Vec::new();
+                for (index, (cond, _)) in r.iter().enumerate() {
+                    let cond_value = self.generate_node(cond);
+
+                    let switch_label = format!("switch_{label}_{index}");
+                    switch_labels.push(format!(
+                        "{} {}, label %{switch_label}",
+                        cond_value.ty, cond_value.name
+                    ));
+                }
+
+                println!(
+                    "  switch {} {}, label %{switch_label} [{}]",
+                    ln.ty,
+                    ln.name,
+                    switch_labels.join(" ")
+                );
+
+                println!("{switch_label}:");
+                println!("  unreachable");
+
+                for (index, (_, block)) in r.iter().enumerate() {
+                    let switch_label = format!("switch_{label}_{index}");
+                    println!("{switch_label}:");
+
+                    self.generate_node(block);
+                    println!("  br label %switch_{label}_after");
+                }
+
+                println!("switch_{label}_after:");
+
+                // noop
+                Value {
+                    name: format!("testtest"),
+                    ty: Type::Int,
+                }
+            }
         }
     }
 }

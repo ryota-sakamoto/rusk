@@ -29,10 +29,12 @@ pub enum TokenKind {
     If,
     Else,
     Arrow,
+    DoubleArrow,
     While,
     Not,
     Struct,
     Enum,
+    Match,
     Dot,
     Identifier(String),
     Num(i32),
@@ -87,6 +89,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '=' => {
                 if chars.next_if(|c2| *c2 == '=').is_some() {
                     push_token(TokenKind::Eq);
+                } else if chars.next_if(|c2| *c2 == '>').is_some() {
+                    push_token(TokenKind::DoubleArrow);
                 } else {
                     push_token(TokenKind::Assign);
                 }
@@ -161,6 +165,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "false" => push_token(TokenKind::Bool(false)),
                     "struct" => push_token(TokenKind::Struct),
                     "enum" => push_token(TokenKind::Enum),
+                    "match" => push_token(TokenKind::Match),
                     _ => push_token(TokenKind::Identifier(identifier)),
                 }
             }

@@ -73,6 +73,7 @@ pub enum Node {
     Not(Box<Node>),
     Struct(String, BTreeMap<String, Node>),
     Enum(String, String),
+    Match(Box<Node>, Vec<(Node, Node)>),
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -308,6 +309,29 @@ impl<'a> Parser<'a> {
             }
 
             return Node::Let(identifier, ty, Box::new(node), is_mut);
+        }
+
+        if self.consume(TokenKind::Match) {
+            let prev_allow_struct = self.allow_struct;
+            self.allow_struct = false;
+            let node = self.expr();
+            self.allow_struct = prev_allow_struct;
+
+            if !self.consume(TokenKind::LBrace) {
+                panic!("should TokenKind::LBrace");
+            }
+
+            let mut conditions = Vec::new();
+            while !self.consume(TokenKind::RBrace) {
+                let condition = self.primary();
+                if !self.consume(TokenKind::DoubleArrow) {
+                    panic!("should be TokenKind::Arrow");
+                }
+
+                conditions.push((condition, self.block()));
+            }
+
+            return Node::Match(Box::new(node), conditions);
         }
 
         let node = self.expr();

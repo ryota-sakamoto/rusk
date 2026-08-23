@@ -152,6 +152,12 @@ impl<'a> FunctionAnalyzer<'a> {
             Node::Enum(_, _) => {
                 // noop
             }
+            Node::Match(l, r) => {
+                self.analyze_node(l);
+                for v in r {
+                    self.analyze_node(&v.1);
+                }
+            }
             Node::Num(_) | Node::String(_) | Node::Bool(_) => {
                 // noop
             }
