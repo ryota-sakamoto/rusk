@@ -495,19 +495,19 @@ impl<'a> Parser<'a> {
             return node;
         }
 
-        let parsed_node = match self.current().map(|t| &t.kind) {
-            Some(TokenKind::Num(n)) => Some(Node::Num(*n)),
-            Some(TokenKind::String(s)) => Some(Node::String(s.clone())),
-            Some(TokenKind::Bool(b)) => Some(Node::Bool(*b)),
-            _ => None,
+        self.literal()
+    }
+
+    fn literal(&mut self) -> Node {
+        let node = match self.current().map(|t| &t.kind) {
+            Some(TokenKind::Num(n)) => Node::Num(*n),
+            Some(TokenKind::String(s)) => Node::String(s.clone()),
+            Some(TokenKind::Bool(b)) => Node::Bool(*b),
+            _ => panic!("should be Token, but {:?}", self.current()),
         };
 
-        if let Some(node) = parsed_node {
-            self.pos += 1;
-            return node;
-        }
-
-        panic!("should be Token, but {:?}", self.current());
+        self.pos += 1;
+        node
     }
 }
 
