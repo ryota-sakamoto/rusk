@@ -1,11 +1,12 @@
 use core::panic;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::ast::{Function, Node, Program};
+use crate::hir::{Function as HirFunction, Node as HirNode, Program as HirProgram};
 
-pub fn analyze(program: &Program) {
+pub fn analyze(program: &Program) -> HirProgram {
     let mut analyzer = Analyzer::new(program);
-    analyzer.analyze();
+    analyzer.analyze()
 }
 
 struct Analyzer<'a> {
@@ -21,12 +22,27 @@ impl<'a> Analyzer<'a> {
         }
     }
 
-    fn analyze(&mut self) {
+    fn analyze(&mut self) -> HirProgram {
         self.analyze_functions();
 
+        let mut functions = Vec::new();
         for f in &self.program.functions {
             let mut function_analyzer = FunctionAnalyzer::new(f, &self.functions);
-            function_analyzer.analyze();
+
+            functions.push(HirFunction {
+                name: f.name.clone(),
+                args: f.args.clone(),
+                body: function_analyzer.analyze_node(&f.body),
+                ty: f.ty.clone(),
+                mod_name: f.mod_name.clone(),
+            });
+        }
+
+        HirProgram {
+            mods: self.program.mods.clone(),
+            enums: self.program.enums.clone(),
+            structs: self.program.structs.clone(),
+            functions,
         }
     }
 
@@ -46,7 +62,6 @@ impl<'a> Analyzer<'a> {
 }
 
 struct FunctionAnalyzer<'a> {
-    function: &'a Function,
     functions: &'a HashMap<String, &'a Function>,
     map: HashMap<&'a str, bool>,
 }
@@ -58,36 +73,49 @@ impl<'a> FunctionAnalyzer<'a> {
             map.insert(arg.name.as_str(), false);
         }
 
-        Self {
-            function,
-            functions,
-            map,
-        }
+        Self { functions, map }
     }
 
-    fn analyze(&mut self) {
-        self.analyze_node(&self.function.body);
-    }
-
-    fn analyze_node(&mut self, node: &'a Node) {
+    fn analyze_node(&mut self, node: &'a Node) -> HirNode {
         match node {
-            Node::Add(l, r) | Node::Sub(l, r) | Node::Mul(l, r) | Node::Div(l, r) => {
-                self.analyze_node(l);
-                self.analyze_node(r);
-            }
-            Node::Let(name, _, node, is_mut) => {
-                self.analyze_node(node);
+            Node::Add(l, r) => HirNode::Add(
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+            ),
+            Node::Sub(l, r) => HirNode::Sub(
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+            ),
+            Node::Mul(l, r) => HirNode::Mul(
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+            ),
+            Node::Div(l, r) => HirNode::Div(
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+            ),
+            Node::Let(name, ty, node, is_mut) => {
                 self.map.insert(name, *is_mut);
+                HirNode::Let(
+                    name.clone(),
+                    ty.clone(),
+                    Box::new(self.analyze_node(node)),
+                    *is_mut,
+                )
             }
-            Node::RLet(name, _) => {
+            Node::RLet(name, field) => {
                 if !self.map.contains_key(&name.as_str()) {
                     panic!("{:?} is not defined", name);
                 }
+                HirNode::RLet(name.clone(), field.clone())
             }
             Node::Call(name, args) => {
                 // TODO: check libc functions
                 if name == "printf" {
-                    return;
+                    return HirNode::Call(
+                        name.clone(),
+                        args.iter().map(|v| self.analyze_node(v)).collect(),
+                    );
                 }
 
                 let f = self
@@ -103,9 +131,13 @@ impl<'a> FunctionAnalyzer<'a> {
                         args.len()
                     );
                 }
+
+                HirNode::Call(
+                    name.clone(),
+                    args.iter().map(|v| self.analyze_node(v)).collect(),
+                )
             }
             Node::Assign(s, b) => {
-                self.analyze_node(b);
                 let v = self
                     .map
                     .get(s.as_str())
@@ -113,54 +145,52 @@ impl<'a> FunctionAnalyzer<'a> {
                 if !v {
                     panic!("{:?} should be mut", s);
                 }
+
+                HirNode::Assign(s.clone(), Box::new(self.analyze_node(b)))
             }
-            Node::If(l, r, e) => {
-                self.analyze_node(l);
-                self.analyze_node(r);
-                if let Some(e) = e {
-                    self.analyze_node(e);
+            Node::If(l, r, e) => HirNode::If(
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+                e.as_ref().map(|e| Box::new(self.analyze_node(e))),
+            ),
+            Node::Comparison(ty, l, r) => HirNode::Comparison(
+                ty.clone(),
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+            ),
+            Node::While(l, r) => HirNode::While(
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+            ),
+            Node::Block(b) => HirNode::Block(b.iter().map(|v| self.analyze_node(v)).collect()),
+            Node::Ret(r) => HirNode::Ret(Box::new(self.analyze_node(r))),
+            Node::And(l, r) => HirNode::And(
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+            ),
+            Node::Or(l, r) => HirNode::Or(
+                Box::new(self.analyze_node(l)),
+                Box::new(self.analyze_node(r)),
+            ),
+            Node::Not(r) => HirNode::Not(Box::new(self.analyze_node(r))),
+            Node::Struct(name, fields) => {
+                let mut map = BTreeMap::new();
+                for (k, f) in fields {
+                    map.insert(k.clone(), self.analyze_node(f));
                 }
+
+                HirNode::Struct(name.clone(), map)
             }
-            Node::Comparison(_, l, r) => {
-                self.analyze_node(l);
-                self.analyze_node(r);
-            }
-            Node::While(l, r) => {
-                self.analyze_node(l);
-                self.analyze_node(r);
-            }
-            Node::Block(b) => {
-                for v in b {
-                    self.analyze_node(v);
-                }
-            }
-            Node::Ret(r) => {
-                self.analyze_node(r);
-            }
-            Node::And(l, r) | Node::Or(l, r) => {
-                self.analyze_node(l);
-                self.analyze_node(r);
-            }
-            Node::Not(r) => {
-                self.analyze_node(r);
-            }
-            Node::Struct(_, fields) => {
-                for f in fields.values() {
-                    self.analyze_node(f);
-                }
-            }
-            Node::Enum(_, _) => {
-                // noop
-            }
-            Node::Match(l, r) => {
-                self.analyze_node(l);
-                for v in r {
-                    self.analyze_node(&v.1);
-                }
-            }
-            Node::Num(_) | Node::String(_) | Node::Bool(_) => {
-                // noop
-            }
+            Node::Enum(name, variant) => HirNode::Enum(name.clone(), variant.clone()),
+            Node::Match(l, r) => HirNode::Match(
+                Box::new(self.analyze_node(l)),
+                r.iter()
+                    .map(|(a, b)| (self.analyze_node(a), self.analyze_node(b)))
+                    .collect(),
+            ),
+            Node::Num(n) => HirNode::Num(*n),
+            Node::String(s) => HirNode::String(s.clone()),
+            Node::Bool(b) => HirNode::Bool(*b),
         }
     }
 }

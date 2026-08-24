@@ -4,6 +4,7 @@ use crate::ast::Program;
 
 mod ast;
 mod code;
+mod hir;
 mod semantic;
 mod token;
 
@@ -23,8 +24,8 @@ fn main() {
         program.functions.extend(mod_program.functions);
     }
 
-    semantic::analyze(&program);
-    code::generate(&program);
+    let hir_program = semantic::analyze(&program);
+    code::generate(&hir_program);
 }
 
 fn new_program(base: &Path, p: &Path, mod_name: Option<String>) -> Program {

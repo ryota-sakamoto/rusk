@@ -32,19 +32,19 @@ impl Function {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct StructType {
     pub name: String,
     pub fields: Vec<Arg>,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct EnumType {
     pub name: String,
     pub variants: Vec<String>,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Arg {
     pub name: String,
     pub ty: String,
@@ -76,7 +76,7 @@ pub enum Node {
     Match(Box<Node>, Vec<(Node, Node)>),
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum ComparisonType {
     Eq,
     Ne,

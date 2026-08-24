@@ -1,7 +1,8 @@
 use core::panic;
 use std::{collections::HashMap, fmt::Display, str::FromStr};
 
-use crate::ast::{ComparisonType, Function, Node, Program};
+use crate::ast::ComparisonType;
+use crate::hir::{Function, Node, Program};
 
 pub fn generate(program: &Program) {
     let mut generator = Generator::new(program);
