@@ -44,7 +44,7 @@ pub enum Node {
     Let(String, Option<String>, Box<Node>, bool),
     RLet(String, Option<String>),
     Assign(String, Box<Node>),
-    Call(String, Vec<Node>),
+    Call(String, Vec<Node>, Type),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
     And(Box<Node>, Box<Node>),
     Or(Box<Node>, Box<Node>),
@@ -57,7 +57,7 @@ pub enum Node {
     Match(Box<Node>, Vec<(Node, Node)>),
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Type {
     Int,
     Int8,

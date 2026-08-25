@@ -12,7 +12,6 @@ pub fn generate(program: &Program) {
 
 struct Generator<'a> {
     string_map: HashMap<&'a str, String>,
-    function_map: HashMap<String, &'a str>,
     string_index: u64,
     program: &'a Program,
 }
@@ -21,23 +20,20 @@ impl<'a> Generator<'a> {
     fn new(program: &'a Program) -> Self {
         Self {
             string_map: HashMap::new(),
-            function_map: HashMap::new(),
             string_index: 0,
             program,
         }
     }
 
     fn parse(&mut self) {
-        self.function_map.insert("printf".to_owned(), "i32");
         for f in &self.program.functions {
             self.parse_node(&f.body);
-            self.function_map.insert(f.full_name(), &f.ty);
         }
     }
 
     fn parse_node(&mut self, node: &'a Node) {
         match node {
-            Node::Call(_l, args) => {
+            Node::Call(_l, args, _) => {
                 for v in args {
                     self.parse_node(v);
                 }
@@ -106,13 +102,7 @@ impl<'a> Generator<'a> {
 
         for f in self.program.functions.iter() {
             println!();
-            let generator = GenerateFunction::new(
-                f,
-                &self.string_map,
-                &self.function_map,
-                &struct_map,
-                &enum_map,
-            );
+            let generator = GenerateFunction::new(f, &self.string_map, &struct_map, &enum_map);
             generator.generate();
         }
     }
@@ -134,7 +124,6 @@ struct GenerateFunction<'a> {
     label: u64,
     map: HashMap<&'a str, Value>,
     string_map: &'a HashMap<&'a str, String>,
-    function_map: &'a HashMap<String, &'a str>,
     struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
     enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     has_return: bool,
@@ -144,7 +133,6 @@ impl<'a> GenerateFunction<'a> {
     fn new(
         function: &'a Function,
         string_map: &'a HashMap<&'a str, String>,
-        function_map: &'a HashMap<String, &'a str>,
         struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
         enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     ) -> Self {
@@ -154,7 +142,6 @@ impl<'a> GenerateFunction<'a> {
             label: 0,
             map: HashMap::new(),
             string_map,
-            function_map,
             struct_map,
             enum_map,
             has_return: false,
@@ -302,7 +289,7 @@ impl<'a> GenerateFunction<'a> {
                     ty: ret.ty,
                 }
             }
-            Node::Call(name, args) => {
+            Node::Call(name, args, ty) => {
                 let mut call_args = Vec::new();
 
                 for arg in args {
@@ -310,14 +297,12 @@ impl<'a> GenerateFunction<'a> {
                     call_args.push(ret);
                 }
 
-                let fn_ty = self.function_map[name.as_str()];
-
                 let reg = self.new_reg();
                 if !call_args.is_empty() {
                     println!(
                         "  %r{} = call {} @\"{}\"({})",
                         reg,
-                        fn_ty,
+                        ty,
                         name,
                         call_args
                             .iter()
@@ -326,12 +311,12 @@ impl<'a> GenerateFunction<'a> {
                             .join(", ")
                     );
                 } else {
-                    println!("  %r{} = call {} @\"{}\"()", reg, fn_ty, name);
+                    println!("  %r{} = call {} @\"{}\"()", reg, ty, name);
                 }
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: fn_ty.parse().unwrap(),
+                    ty: ty.clone(),
                 }
             }
             Node::Let(name, ty, right, _) => {

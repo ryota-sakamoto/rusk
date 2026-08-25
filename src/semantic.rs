@@ -1,8 +1,8 @@
 use core::panic;
 use std::collections::{BTreeMap, HashMap};
 
-use crate::ast::{Function, Node, Program};
-use crate::hir::{Function as HirFunction, Node as HirNode, Program as HirProgram};
+use crate::ast::{Arg, Function, Node, Program};
+use crate::hir::{Function as HirFunction, Node as HirNode, Program as HirProgram, Type};
 
 pub fn analyze(program: &Program) -> HirProgram {
     let mut analyzer = Analyzer::new(program);
@@ -11,7 +11,12 @@ pub fn analyze(program: &Program) -> HirProgram {
 
 struct Analyzer<'a> {
     program: &'a Program,
-    functions: HashMap<String, &'a Function>,
+    functions: HashMap<String, FunctionMetadata>,
+}
+
+struct FunctionMetadata {
+    args: Vec<Arg>,
+    ty: Type,
 }
 
 impl<'a> Analyzer<'a> {
@@ -52,7 +57,13 @@ impl<'a> Analyzer<'a> {
                 panic!("{:?} is duplicated", f.name);
             }
 
-            self.functions.insert(f.full_name(), f);
+            self.functions.insert(
+                f.full_name(),
+                FunctionMetadata {
+                    args: f.args.clone(),
+                    ty: f.ty.parse().unwrap(),
+                },
+            );
         }
 
         if !self.functions.contains_key("main") {
@@ -62,7 +73,7 @@ impl<'a> Analyzer<'a> {
 }
 
 struct FunctionAnalyzer<'a> {
-    functions: &'a HashMap<String, &'a Function>,
+    functions: &'a HashMap<String, FunctionMetadata>,
     let_map: HashMap<&'a str, LetMetadata>,
 }
 
@@ -71,7 +82,7 @@ struct LetMetadata {
 }
 
 impl<'a> FunctionAnalyzer<'a> {
-    fn new(function: &'a Function, functions: &'a HashMap<String, &'a Function>) -> Self {
+    fn new(function: &'a Function, functions: &'a HashMap<String, FunctionMetadata>) -> Self {
         let mut let_map = HashMap::new();
         for arg in &function.args {
             let_map.insert(arg.name.as_str(), LetMetadata { is_mut: false });
@@ -119,6 +130,7 @@ impl<'a> FunctionAnalyzer<'a> {
                     return HirNode::Call(
                         name.clone(),
                         args.iter().map(|v| self.analyze_node(v)).collect(),
+                        Type::Int,
                     );
                 }
 
@@ -139,6 +151,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 HirNode::Call(
                     name.clone(),
                     args.iter().map(|v| self.analyze_node(v)).collect(),
+                    f.ty.clone(),
                 )
             }
             Node::Assign(s, b) => {
