@@ -41,7 +41,7 @@ pub enum Node {
     String(String),
     Bool(bool),
     Ret(Box<Node>),
-    Let(String, Option<String>, Box<Node>, bool),
+    Let(String, Type, Box<Node>, bool),
     RLet(String, Option<String>),
     Assign(String, Box<Node>),
     Call(String, Vec<Node>, Type),

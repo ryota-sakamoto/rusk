@@ -110,13 +110,14 @@ impl<'a> FunctionAnalyzer<'a> {
                 Box::new(self.analyze_node(r)),
             ),
             Node::Let(name, ty, node, is_mut) => {
+                let rn = self.analyze_node(node);
+                let actual_ty = ty
+                    .clone()
+                    .and_then(|ty| ty.parse::<Type>().ok())
+                    .unwrap_or(self.type_of(&rn));
+
                 self.let_map.insert(name, LetMetadata { is_mut: *is_mut });
-                HirNode::Let(
-                    name.clone(),
-                    ty.clone(),
-                    Box::new(self.analyze_node(node)),
-                    *is_mut,
-                )
+                HirNode::Let(name.clone(), actual_ty, Box::new(rn), *is_mut)
             }
             Node::RLet(name, field) => {
                 if !self.let_map.contains_key(&name.as_str()) {
@@ -208,6 +209,18 @@ impl<'a> FunctionAnalyzer<'a> {
             Node::Num(n) => HirNode::Num(*n),
             Node::String(s) => HirNode::String(s.clone()),
             Node::Bool(b) => HirNode::Bool(*b),
+        }
+    }
+
+    fn type_of(&self, node: &HirNode) -> Type {
+        // TODO: fix all type
+        match node {
+            HirNode::Num(_) => Type::Int,
+            HirNode::Mul(_, _) => Type::Int,
+            HirNode::RLet(_, _) => Type::Int,
+            HirNode::Struct(name, _) => Type::Struct(name.clone()),
+            HirNode::Enum(_, _) => Type::Int,
+            _ => panic!("{:?} should be implemented", node),
         }
     }
 }
