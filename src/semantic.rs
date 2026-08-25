@@ -63,17 +63,21 @@ impl<'a> Analyzer<'a> {
 
 struct FunctionAnalyzer<'a> {
     functions: &'a HashMap<String, &'a Function>,
-    map: HashMap<&'a str, bool>,
+    let_map: HashMap<&'a str, LetMetadata>,
+}
+
+struct LetMetadata {
+    is_mut: bool,
 }
 
 impl<'a> FunctionAnalyzer<'a> {
     fn new(function: &'a Function, functions: &'a HashMap<String, &'a Function>) -> Self {
-        let mut map = HashMap::new();
+        let mut let_map = HashMap::new();
         for arg in &function.args {
-            map.insert(arg.name.as_str(), false);
+            let_map.insert(arg.name.as_str(), LetMetadata { is_mut: false });
         }
 
-        Self { functions, map }
+        Self { functions, let_map }
     }
 
     fn analyze_node(&mut self, node: &'a Node) -> HirNode {
@@ -95,7 +99,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 Box::new(self.analyze_node(r)),
             ),
             Node::Let(name, ty, node, is_mut) => {
-                self.map.insert(name, *is_mut);
+                self.let_map.insert(name, LetMetadata { is_mut: *is_mut });
                 HirNode::Let(
                     name.clone(),
                     ty.clone(),
@@ -104,7 +108,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 )
             }
             Node::RLet(name, field) => {
-                if !self.map.contains_key(&name.as_str()) {
+                if !self.let_map.contains_key(&name.as_str()) {
                     panic!("{:?} is not defined", name);
                 }
                 HirNode::RLet(name.clone(), field.clone())
@@ -139,10 +143,10 @@ impl<'a> FunctionAnalyzer<'a> {
             }
             Node::Assign(s, b) => {
                 let v = self
-                    .map
+                    .let_map
                     .get(s.as_str())
                     .unwrap_or_else(|| panic!("{:?} is not defined", s));
-                if !v {
+                if !v.is_mut {
                     panic!("{:?} should be mut", s);
                 }
 
