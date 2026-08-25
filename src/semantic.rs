@@ -79,13 +79,20 @@ struct FunctionAnalyzer<'a> {
 
 struct LetMetadata {
     is_mut: bool,
+    ty: Type,
 }
 
 impl<'a> FunctionAnalyzer<'a> {
     fn new(function: &'a Function, functions: &'a HashMap<String, FunctionMetadata>) -> Self {
         let mut let_map = HashMap::new();
         for arg in &function.args {
-            let_map.insert(arg.name.as_str(), LetMetadata { is_mut: false });
+            let_map.insert(
+                arg.name.as_str(),
+                LetMetadata {
+                    is_mut: false,
+                    ty: arg.ty.parse().unwrap(),
+                },
+            );
         }
 
         Self { functions, let_map }
@@ -116,7 +123,13 @@ impl<'a> FunctionAnalyzer<'a> {
                     .and_then(|ty| ty.parse::<Type>().ok())
                     .unwrap_or(self.type_of(&rn));
 
-                self.let_map.insert(name, LetMetadata { is_mut: *is_mut });
+                self.let_map.insert(
+                    name,
+                    LetMetadata {
+                        is_mut: *is_mut,
+                        ty: actual_ty.clone(),
+                    },
+                );
                 HirNode::Let(name.clone(), actual_ty, Box::new(rn), *is_mut)
             }
             Node::RLet(name, field) => {
@@ -156,6 +169,8 @@ impl<'a> FunctionAnalyzer<'a> {
                 )
             }
             Node::Assign(s, b) => {
+                let rn = self.analyze_node(b);
+
                 let v = self
                     .let_map
                     .get(s.as_str())
@@ -164,7 +179,12 @@ impl<'a> FunctionAnalyzer<'a> {
                     panic!("{:?} should be mut", s);
                 }
 
-                HirNode::Assign(s.clone(), Box::new(self.analyze_node(b)))
+                let rn_ty = self.type_of(&rn);
+                if rn_ty != v.ty {
+                    panic!("expected {}, found {}", v.ty, rn_ty);
+                }
+
+                HirNode::Assign(s.clone(), Box::new(rn))
             }
             Node::If(l, r, e) => HirNode::If(
                 Box::new(self.analyze_node(l)),
@@ -216,6 +236,9 @@ impl<'a> FunctionAnalyzer<'a> {
         // TODO: fix all type
         match node {
             HirNode::Num(_) => Type::Int,
+            HirNode::Bool(_) => Type::Bool,
+            HirNode::Add(_, _) => Type::Int,
+            HirNode::Sub(_, _) => Type::Int,
             HirNode::Mul(_, _) => Type::Int,
             HirNode::RLet(_, _) => Type::Int,
             HirNode::Struct(name, _) => Type::Struct(name.clone()),
@@ -316,6 +339,26 @@ mod tests {
                 body: Node::Block(vec![
                     Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), false),
                     Node::Assign("a".to_owned(), Box::new(Node::Num(3))),
+                ]),
+                ty: "void".to_owned(),
+                mod_name: None,
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"expected i32, found i1"#)]
+    fn check_assign_type() {
+        analyze(&Program {
+            mods: vec![],
+            structs: vec![],
+            enums: vec![],
+            functions: vec![Function {
+                name: "main".to_owned(),
+                args: Vec::new(),
+                body: Node::Block(vec![
+                    Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), true),
+                    Node::Assign("a".to_owned(), Box::new(Node::Bool(false))),
                 ]),
                 ty: "void".to_owned(),
                 mod_name: None,
