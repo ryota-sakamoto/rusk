@@ -411,16 +411,16 @@ impl<'a> GenerateFunction<'a> {
                     ty: ty.clone(),
                 }
             }
-            Node::Or(l, r) => {
+            Node::Or(l, r, ty) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = or i1 {}, {}", reg, ln.name, rn.name);
+                println!("  %r{} = or {} {}, {}", reg, ty, ln.name, rn.name);
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Int,
+                    ty: ty.clone(),
                 }
             }
             Node::If(l, body, ebody) => {

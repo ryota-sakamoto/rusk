@@ -225,10 +225,18 @@ impl<'a> FunctionAnalyzer<'a> {
 
                 HirNode::And(Box::new(ln), Box::new(rn), ln_ty)
             }
-            Node::Or(l, r) => HirNode::Or(
-                Box::new(self.analyze_node(l)),
-                Box::new(self.analyze_node(r)),
-            ),
+            Node::Or(l, r) => {
+                let ln = self.analyze_node(l);
+                let rn = self.analyze_node(r);
+
+                let ln_ty = self.type_of(&ln);
+                let rn_ty = self.type_of(&rn);
+                if ln_ty != rn_ty {
+                    panic!("expected {}, found {}", ln_ty, rn_ty);
+                }
+
+                HirNode::Or(Box::new(ln), Box::new(rn), ln_ty)
+            }
             Node::Not(r) => HirNode::Not(Box::new(self.analyze_node(r))),
             Node::Struct(name, fields) => {
                 let mut map = BTreeMap::new();
