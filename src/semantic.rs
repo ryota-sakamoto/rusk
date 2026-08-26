@@ -213,10 +213,18 @@ impl<'a> FunctionAnalyzer<'a> {
             ),
             Node::Block(b) => HirNode::Block(b.iter().map(|v| self.analyze_node(v)).collect()),
             Node::Ret(r) => HirNode::Ret(Box::new(self.analyze_node(r))),
-            Node::And(l, r) => HirNode::And(
-                Box::new(self.analyze_node(l)),
-                Box::new(self.analyze_node(r)),
-            ),
+            Node::And(l, r) => {
+                let ln = self.analyze_node(l);
+                let rn = self.analyze_node(r);
+
+                let ln_ty = self.type_of(&ln);
+                let rn_ty = self.type_of(&rn);
+                if ln_ty != rn_ty {
+                    panic!("expected {}, found {}", ln_ty, rn_ty);
+                }
+
+                HirNode::And(Box::new(ln), Box::new(rn), ln_ty)
+            }
             Node::Or(l, r) => HirNode::Or(
                 Box::new(self.analyze_node(l)),
                 Box::new(self.analyze_node(r)),
@@ -256,6 +264,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Call(_, _, ty) => ty.clone(),
             HirNode::Struct(name, _) => Type::Struct(name.clone()),
             HirNode::Enum(_, _) => Type::Int,
+            HirNode::Comparison(_, _, _) => Type::Bool,
             _ => panic!("{:?} should be implemented", node),
         }
     }

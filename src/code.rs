@@ -399,16 +399,16 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Int,
                 }
             }
-            Node::And(l, r) => {
+            Node::And(l, r, ty) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = and i1 {}, {}", reg, ln.name, rn.name);
+                println!("  %r{} = and {} {}, {}", reg, ty, ln.name, rn.name);
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Int,
+                    ty: ty.clone(),
                 }
             }
             Node::Or(l, r) => {

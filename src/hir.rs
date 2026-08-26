@@ -47,7 +47,7 @@ pub enum Node {
     Assign(String, Box<Node>),
     Call(String, Vec<Node>, Type),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
-    And(Box<Node>, Box<Node>),
+    And(Box<Node>, Box<Node>, Type),
     Or(Box<Node>, Box<Node>),
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     While(Box<Node>, Box<Node>),
