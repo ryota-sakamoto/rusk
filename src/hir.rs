@@ -33,7 +33,7 @@ impl Function {
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Node {
-    Add(Box<Node>, Box<Node>),
+    Add(Box<Node>, Box<Node>, Type),
     Sub(Box<Node>, Box<Node>),
     Mul(Box<Node>, Box<Node>),
     Div(Box<Node>, Box<Node>),

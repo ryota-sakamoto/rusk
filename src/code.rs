@@ -217,12 +217,12 @@ impl<'a> GenerateFunction<'a> {
 
     fn generate_node(&mut self, node: &'a Node) -> Value {
         match node {
-            Node::Add(l, r) => {
+            Node::Add(l, r, ty) => {
                 let ln = self.generate_node(l);
                 let rn = self.generate_node(r);
 
                 let reg = self.new_reg();
-                println!("  %r{} = add {} {}, {}", reg, ln.ty, ln.name, rn.name);
+                println!("  %r{} = add {} {}, {}", reg, ty, ln.name, rn.name);
 
                 Value {
                     name: format!("%r{reg}"),

@@ -100,10 +100,18 @@ impl<'a> FunctionAnalyzer<'a> {
 
     fn analyze_node(&mut self, node: &'a Node) -> HirNode {
         match node {
-            Node::Add(l, r) => HirNode::Add(
-                Box::new(self.analyze_node(l)),
-                Box::new(self.analyze_node(r)),
-            ),
+            Node::Add(l, r) => {
+                let ln = self.analyze_node(l);
+                let rn = self.analyze_node(r);
+
+                let ln_ty = self.type_of(&ln);
+                let rn_ty = self.type_of(&rn);
+                if ln_ty != rn_ty {
+                    panic!("expected {}, found {}", ln_ty, rn_ty);
+                }
+
+                HirNode::Add(Box::new(ln), Box::new(rn), ln_ty)
+            }
             Node::Sub(l, r) => HirNode::Sub(
                 Box::new(self.analyze_node(l)),
                 Box::new(self.analyze_node(r)),
@@ -237,10 +245,11 @@ impl<'a> FunctionAnalyzer<'a> {
         match node {
             HirNode::Num(_) => Type::Int,
             HirNode::Bool(_) => Type::Bool,
-            HirNode::Add(_, _) => Type::Int,
+            HirNode::Add(_, _, ty) => ty.clone(),
             HirNode::Sub(_, _) => Type::Int,
             HirNode::Mul(_, _) => Type::Int,
             HirNode::RLet(_, _) => Type::Int,
+            HirNode::Call(_, _, ty) => ty.clone(),
             HirNode::Struct(name, _) => Type::Struct(name.clone()),
             HirNode::Enum(_, _) => Type::Int,
             _ => panic!("{:?} should be implemented", node),
