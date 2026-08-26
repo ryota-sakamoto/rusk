@@ -336,37 +336,36 @@ impl<'a> GenerateFunction<'a> {
 
                 r
             }
-            Node::RLet(name, field) => {
+            Node::RLet(name) => {
                 let reg = self.new_reg();
                 let r = self.map.get(name.as_str()).unwrap();
                 let inner_ty = r.ty.inner();
 
-                if let Some(field) = field {
-                    let field_map = self
-                        .struct_map
-                        .get(inner_ty.to_string().strip_prefix("%").unwrap())
-                        .unwrap();
-                    let struct_field = &field_map[field.as_str()];
-
-                    println!(
-                        "  %r{reg} = getelementptr {}, ptr {}, i32 0, i32 {}",
-                        inner_ty, r.name, struct_field.index,
-                    );
-
-                    let field_reg = self.new_reg();
-                    println!("  %r{field_reg} = load {}, ptr %r{reg}", struct_field.ty);
-
-                    return Value {
-                        name: format!("%r{field_reg}"),
-                        ty: struct_field.ty.clone(),
-                    };
-                }
-
                 println!("  %r{reg} = load {}, ptr {}", inner_ty, r.name);
-                return Value {
+                Value {
                     name: format!("%r{reg}"),
                     ty: inner_ty.clone(),
-                };
+                }
+            }
+            Node::FieldAccess(node, field) => {
+                let r = self.generate_node(node);
+                let reg = self.new_reg();
+
+                let field_map = self
+                    .struct_map
+                    .get(r.ty.to_string().strip_prefix("%").unwrap())
+                    .unwrap();
+                let struct_field = &field_map[field.as_str()];
+
+                println!(
+                    "  %r{reg} = extractvalue {} {}, {}",
+                    r.ty, r.name, struct_field.index,
+                );
+
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: struct_field.ty.clone(),
+                }
             }
             Node::Assign(name, r) => {
                 let rn = self.generate_node(r);

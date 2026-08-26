@@ -140,11 +140,14 @@ impl<'a> FunctionAnalyzer<'a> {
                 );
                 HirNode::Let(name.clone(), actual_ty, Box::new(rn), *is_mut)
             }
-            Node::RLet(name, field) => {
+            Node::RLet(name) => {
                 if !self.let_map.contains_key(&name.as_str()) {
                     panic!("{:?} is not defined", name);
                 }
-                HirNode::RLet(name.clone(), field.clone())
+                HirNode::RLet(name.clone())
+            }
+            Node::FieldAccess(node, field) => {
+                HirNode::FieldAccess(Box::new(self.analyze_node(node)), field.clone())
             }
             Node::Call(name, args) => {
                 // TODO: check libc functions
@@ -248,7 +251,8 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Add(_, _, ty) => ty.clone(),
             HirNode::Sub(_, _) => Type::Int,
             HirNode::Mul(_, _) => Type::Int,
-            HirNode::RLet(_, _) => Type::Int,
+            HirNode::RLet(_) => Type::Int,
+            HirNode::FieldAccess(_, _) => Type::Int,
             HirNode::Call(_, _, ty) => ty.clone(),
             HirNode::Struct(name, _) => Type::Struct(name.clone()),
             HirNode::Enum(_, _) => Type::Int,
@@ -324,7 +328,7 @@ mod tests {
                     "a".to_owned(),
                     None,
                     Box::new(Node::Add(
-                        Box::new(Node::RLet("b".to_owned(), None)),
+                        Box::new(Node::RLet("b".to_owned())),
                         Box::new(Node::Num(1)),
                     )),
                     false,
@@ -388,7 +392,7 @@ mod tests {
                 body: Node::Block(vec![Node::If(
                     Box::new(Node::Comparison(
                         crate::ast::ComparisonType::Eq,
-                        Box::new(Node::RLet("c".to_owned(), None)),
+                        Box::new(Node::RLet("c".to_owned())),
                         Box::new(Node::Num(10)),
                     )),
                     Box::new(Node::Block(vec![])),
@@ -410,7 +414,7 @@ mod tests {
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
-                body: Node::Block(vec![Node::Ret(Box::new(Node::RLet("d".to_owned(), None)))]),
+                body: Node::Block(vec![Node::Ret(Box::new(Node::RLet("d".to_owned())))]),
                 ty: "void".to_owned(),
                 mod_name: None,
             }],
@@ -429,7 +433,7 @@ mod tests {
                 args: Vec::new(),
                 body: Node::Block(vec![Node::Struct(
                     "Test".to_owned(),
-                    BTreeMap::from([("a".to_owned(), Node::RLet("e".to_owned(), None))]),
+                    BTreeMap::from([("a".to_owned(), Node::RLet("e".to_owned()))]),
                 )]),
                 ty: "void".to_owned(),
                 mod_name: None,

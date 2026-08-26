@@ -61,7 +61,7 @@ pub enum Node {
     Bool(bool),
     Ret(Box<Node>),
     Let(String, Option<String>, Box<Node>, bool),
-    RLet(String, Option<String>),
+    RLet(String),
     Assign(String, Box<Node>),
     Call(String, Vec<Node>),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
@@ -74,6 +74,7 @@ pub enum Node {
     Struct(String, BTreeMap<String, Node>),
     Enum(String, String),
     Match(Box<Node>, Vec<(Node, Node)>),
+    FieldAccess(Box<Node>, String),
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -474,17 +475,16 @@ impl<'a> Parser<'a> {
                 return Node::Assign(identifier, Box::new(self.expr()));
             }
 
-            let field = if self.consume(TokenKind::Dot) {
-                Some(self.identifier().expect("should be identifier"))
-            } else {
-                None
-            };
+            if self.consume(TokenKind::Dot) {
+                let field = self.identifier().expect("should be identifier");
+                return Node::FieldAccess(Box::new(Node::RLet(identifier)), field);
+            }
 
             if let Some(m) = mod_function {
                 return Node::Enum(identifier, m);
             }
 
-            return Node::RLet(identifier, field);
+            return Node::RLet(identifier);
         }
 
         if self.consume(TokenKind::LParen) {
@@ -558,7 +558,7 @@ mod tests {
                 ],
                 Node::Comparison(
                     ComparisonType::Eq,
-                    Box::new(Node::RLet("a".to_owned(), None)),
+                    Box::new(Node::RLet("a".to_owned())),
                     Box::new(Node::Num(1)),
                 ),
             ),
