@@ -336,15 +336,14 @@ impl<'a> GenerateFunction<'a> {
 
                 r
             }
-            Node::RLet(name) => {
+            Node::RLet(name, ty) => {
                 let reg = self.new_reg();
                 let r = self.map.get(name.as_str()).unwrap();
-                let inner_ty = r.ty.inner();
 
-                println!("  %r{reg} = load {}, ptr {}", inner_ty, r.name);
+                println!("  %r{reg} = load {}, ptr {}", ty, r.name);
                 Value {
                     name: format!("%r{reg}"),
-                    ty: inner_ty.clone(),
+                    ty: ty.clone(),
                 }
             }
             Node::FieldAccess(node, field) => {

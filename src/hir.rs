@@ -42,7 +42,7 @@ pub enum Node {
     Bool(bool),
     Ret(Box<Node>),
     Let(String, Type, Box<Node>, bool),
-    RLet(String),
+    RLet(String, Type),
     FieldAccess(Box<Node>, String),
     Assign(String, Box<Node>),
     Call(String, Vec<Node>, Type),
@@ -92,14 +92,5 @@ impl Display for Type {
                 Type::Struct(name) => format!("%{name}"),
             }
         )
-    }
-}
-
-impl Type {
-    pub fn inner(&self) -> &Self {
-        match self {
-            Type::Ptr(v) => v,
-            _ => panic!("not ptr"),
-        }
     }
 }

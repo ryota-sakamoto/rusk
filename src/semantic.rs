@@ -79,7 +79,7 @@ struct FunctionAnalyzer<'a> {
 
 struct LetMetadata {
     is_mut: bool,
-    ty: Type,
+    pub ty: Type,
 }
 
 impl<'a> FunctionAnalyzer<'a> {
@@ -144,7 +144,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 if !self.let_map.contains_key(&name.as_str()) {
                     panic!("{:?} is not defined", name);
                 }
-                HirNode::RLet(name.clone())
+                HirNode::RLet(name.clone(), self.let_map[name.as_str()].ty.clone())
             }
             Node::FieldAccess(node, field) => {
                 HirNode::FieldAccess(Box::new(self.analyze_node(node)), field.clone())
@@ -267,7 +267,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Add(_, _, ty) => ty.clone(),
             HirNode::Sub(_, _) => Type::Int,
             HirNode::Mul(_, _) => Type::Int,
-            HirNode::RLet(_) => Type::Int,
+            HirNode::RLet(_, ty) => ty.clone(),
             HirNode::FieldAccess(_, _) => Type::Int,
             HirNode::Call(_, _, ty) => ty.clone(),
             HirNode::Struct(name, _) => Type::Struct(name.clone()),
