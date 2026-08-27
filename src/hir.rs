@@ -1,14 +1,17 @@
-use std::{collections::BTreeMap, fmt::Display, str::FromStr};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fmt::Display,
+    str::FromStr,
+};
 
-use crate::ast::{Arg, ComparisonType, EnumType, StructType};
+use crate::ast::{Arg, ComparisonType, EnumType};
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Debug)]
 pub struct Program {
-    pub mods: Vec<String>,
     pub functions: Vec<Function>,
-    pub structs: Vec<StructType>,
     pub enums: Vec<EnumType>,
     pub strings: Vec<String>,
+    pub struct_map: HashMap<String, HashMap<String, StructField>>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -94,4 +97,10 @@ impl Display for Type {
             }
         )
     }
+}
+
+#[derive(Debug)]
+pub struct StructField {
+    pub ty: Type,
+    pub index: usize,
 }

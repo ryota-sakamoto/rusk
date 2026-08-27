@@ -1,8 +1,8 @@
 use core::panic;
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use crate::ast::ComparisonType;
-use crate::hir::{Function, Node, Program, Type};
+use crate::hir::{Function, Node, Program, StructField, Type};
 
 pub fn generate(program: &Program) {
     let mut generator = Generator::new(program);
@@ -28,30 +28,6 @@ impl<'a> Generator<'a> {
             );
         }
 
-        let mut struct_map = HashMap::new();
-        for s in &self.program.structs {
-            let fields = s
-                .fields
-                .iter()
-                .map(|v| format!("{}", Type::from_str(v.ty.as_str()).unwrap()))
-                .collect::<Vec<String>>()
-                .join(", ");
-            println!("%{} = type {{{fields}}}", s.name);
-
-            let mut fields_map = HashMap::new();
-            for (index, field) in s.fields.iter().enumerate() {
-                fields_map.insert(
-                    field.name.as_str(),
-                    StructField {
-                        ty: Type::from_str(&field.ty).unwrap(),
-                        index,
-                    },
-                );
-            }
-
-            struct_map.insert(s.name.as_str(), fields_map);
-        }
-
         let mut enum_map = HashMap::new();
         for e in &self.program.enums {
             println!("%{} = type {{i32}}", e.name);
@@ -68,7 +44,7 @@ impl<'a> Generator<'a> {
 
         for f in self.program.functions.iter() {
             println!();
-            let generator = GenerateFunction::new(f, &struct_map, &enum_map);
+            let generator = GenerateFunction::new(f, &self.program.struct_map, &enum_map);
             generator.generate();
         }
     }
@@ -79,17 +55,12 @@ struct Value {
     ty: Type,
 }
 
-struct StructField {
-    ty: Type,
-    index: usize,
-}
-
 struct GenerateFunction<'a> {
     function: &'a Function,
     index: u64,
     label: u64,
     map: HashMap<&'a str, Value>,
-    struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
+    struct_map: &'a HashMap<String, HashMap<String, StructField>>,
     enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     has_return: bool,
 }
@@ -97,7 +68,7 @@ struct GenerateFunction<'a> {
 impl<'a> GenerateFunction<'a> {
     fn new(
         function: &'a Function,
-        struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
+        struct_map: &'a HashMap<String, HashMap<String, StructField>>,
         enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     ) -> Self {
         Self {

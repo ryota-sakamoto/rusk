@@ -1,8 +1,11 @@
 use core::panic;
 use std::collections::{BTreeMap, HashMap};
+use std::str::FromStr;
 
 use crate::ast::{Arg, Function, Node, Program};
-use crate::hir::{Function as HirFunction, Node as HirNode, Program as HirProgram, Type};
+use crate::hir::{
+    Function as HirFunction, Node as HirNode, Program as HirProgram, StructField, Type,
+};
 
 pub fn analyze(program: &Program) -> HirProgram {
     let mut analyzer = Analyzer::new(program);
@@ -44,12 +47,35 @@ impl<'a> Analyzer<'a> {
             });
         }
 
+        let mut struct_map = HashMap::new();
+        for s in &self.program.structs {
+            let fields = s
+                .fields
+                .iter()
+                .map(|v| format!("{}", Type::from_str(v.ty.as_str()).unwrap()))
+                .collect::<Vec<String>>()
+                .join(", ");
+            println!("%{} = type {{{fields}}}", s.name);
+
+            let mut fields_map = HashMap::new();
+            for (index, field) in s.fields.iter().enumerate() {
+                fields_map.insert(
+                    field.name.clone(),
+                    StructField {
+                        ty: Type::from_str(&field.ty).unwrap(),
+                        index,
+                    },
+                );
+            }
+
+            struct_map.insert(s.name.clone(), fields_map);
+        }
+
         HirProgram {
-            mods: self.program.mods.clone(),
             enums: self.program.enums.clone(),
-            structs: self.program.structs.clone(),
             functions,
             strings,
+            struct_map,
         }
     }
 
