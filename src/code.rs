@@ -6,59 +6,25 @@ use crate::hir::{Function, Node, Program, Type};
 
 pub fn generate(program: &Program) {
     let mut generator = Generator::new(program);
-    generator.parse();
     generator.generate();
 }
 
 struct Generator<'a> {
-    string_map: HashMap<&'a str, String>,
-    string_index: u64,
     program: &'a Program,
 }
 
 impl<'a> Generator<'a> {
     fn new(program: &'a Program) -> Self {
-        Self {
-            string_map: HashMap::new(),
-            string_index: 0,
-            program,
-        }
-    }
-
-    fn parse(&mut self) {
-        for f in &self.program.functions {
-            self.parse_node(&f.body);
-        }
-    }
-
-    fn parse_node(&mut self, node: &'a Node) {
-        match node {
-            Node::Call(_l, args, _) => {
-                for v in args {
-                    self.parse_node(v);
-                }
-            }
-            Node::String(s) if !self.string_map.contains_key(s.as_str()) => {
-                self.string_map
-                    .insert(s, format!("@.str.{}", self.string_index));
-                self.string_index += 1;
-            }
-            Node::Block(body) => {
-                for v in body {
-                    self.parse_node(v);
-                }
-            }
-            _ => {}
-        }
+        Self { program }
     }
 
     fn generate(&mut self) {
-        for (k, v) in &self.string_map {
+        for (k, v) in self.program.strings.iter().enumerate() {
             println!(
-                r#"{} = private unnamed_addr constant [{} x i8] c"{}\00""#,
-                v,
-                k.len() + 1,
+                r#"@.str.{} = private unnamed_addr constant [{} x i8] c"{}\00""#,
                 k,
+                v.len() + 1,
+                v,
             );
         }
 
@@ -102,7 +68,7 @@ impl<'a> Generator<'a> {
 
         for f in self.program.functions.iter() {
             println!();
-            let generator = GenerateFunction::new(f, &self.string_map, &struct_map, &enum_map);
+            let generator = GenerateFunction::new(f, &struct_map, &enum_map);
             generator.generate();
         }
     }
@@ -123,7 +89,6 @@ struct GenerateFunction<'a> {
     index: u64,
     label: u64,
     map: HashMap<&'a str, Value>,
-    string_map: &'a HashMap<&'a str, String>,
     struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
     enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     has_return: bool,
@@ -132,7 +97,6 @@ struct GenerateFunction<'a> {
 impl<'a> GenerateFunction<'a> {
     fn new(
         function: &'a Function,
-        string_map: &'a HashMap<&'a str, String>,
         struct_map: &'a HashMap<&'a str, HashMap<&'a str, StructField>>,
         enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
     ) -> Self {
@@ -141,7 +105,6 @@ impl<'a> GenerateFunction<'a> {
             index: 0,
             label: 0,
             map: HashMap::new(),
-            string_map,
             struct_map,
             enum_map,
             has_return: false,
@@ -269,13 +232,10 @@ impl<'a> GenerateFunction<'a> {
                 name: n.to_string(),
                 ty: Type::Int,
             },
-            Node::String(s) => {
-                let name = self.string_map.get(s.as_str()).unwrap();
-                Value {
-                    name: name.clone(),
-                    ty: Type::Ptr(Box::new(Type::Int)),
-                }
-            }
+            Node::String(id) => Value {
+                name: format!("@.str.{}", id),
+                ty: Type::Ptr(Box::new(Type::Int)),
+            },
             Node::Bool(b) => Value {
                 name: (*b as i32).to_string(),
                 ty: Type::Bool,

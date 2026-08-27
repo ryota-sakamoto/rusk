@@ -31,8 +31,9 @@ impl<'a> Analyzer<'a> {
         self.analyze_functions();
 
         let mut functions = Vec::new();
+        let mut strings = Vec::new();
         for f in &self.program.functions {
-            let mut function_analyzer = FunctionAnalyzer::new(f, &self.functions);
+            let mut function_analyzer = FunctionAnalyzer::new(f, &self.functions, &mut strings);
 
             functions.push(HirFunction {
                 name: f.name.clone(),
@@ -48,6 +49,7 @@ impl<'a> Analyzer<'a> {
             enums: self.program.enums.clone(),
             structs: self.program.structs.clone(),
             functions,
+            strings,
         }
     }
 
@@ -75,6 +77,7 @@ impl<'a> Analyzer<'a> {
 struct FunctionAnalyzer<'a> {
     functions: &'a HashMap<String, FunctionMetadata>,
     let_map: HashMap<&'a str, LetMetadata>,
+    strings: &'a mut Vec<String>,
 }
 
 struct LetMetadata {
@@ -83,7 +86,11 @@ struct LetMetadata {
 }
 
 impl<'a> FunctionAnalyzer<'a> {
-    fn new(function: &'a Function, functions: &'a HashMap<String, FunctionMetadata>) -> Self {
+    fn new(
+        function: &'a Function,
+        functions: &'a HashMap<String, FunctionMetadata>,
+        strings: &'a mut Vec<String>,
+    ) -> Self {
         let mut let_map = HashMap::new();
         for arg in &function.args {
             let_map.insert(
@@ -95,7 +102,11 @@ impl<'a> FunctionAnalyzer<'a> {
             );
         }
 
-        Self { functions, let_map }
+        Self {
+            functions,
+            let_map,
+            strings,
+        }
     }
 
     fn analyze_node(&mut self, node: &'a Node) -> HirNode {
@@ -254,7 +265,12 @@ impl<'a> FunctionAnalyzer<'a> {
                     .collect(),
             ),
             Node::Num(n) => HirNode::Num(*n),
-            Node::String(s) => HirNode::String(s.clone()),
+            Node::String(s) => {
+                if !self.strings.contains(s) {
+                    self.strings.push(s.clone());
+                }
+                HirNode::String(self.strings.len() - 1)
+            }
             Node::Bool(b) => HirNode::Bool(*b),
         }
     }

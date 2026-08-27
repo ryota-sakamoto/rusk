@@ -8,6 +8,7 @@ pub struct Program {
     pub functions: Vec<Function>,
     pub structs: Vec<StructType>,
     pub enums: Vec<EnumType>,
+    pub strings: Vec<String>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -38,7 +39,7 @@ pub enum Node {
     Mul(Box<Node>, Box<Node>),
     Div(Box<Node>, Box<Node>),
     Num(i32),
-    String(String),
+    String(usize),
     Bool(bool),
     Ret(Box<Node>),
     Let(String, Type, Box<Node>, bool),
