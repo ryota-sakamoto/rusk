@@ -47,17 +47,9 @@ impl<'a> Analyzer<'a> {
             });
         }
 
-        let mut struct_map = HashMap::new();
+        let mut struct_map = BTreeMap::new();
         for s in &self.program.structs {
-            let fields = s
-                .fields
-                .iter()
-                .map(|v| format!("{}", Type::from_str(v.ty.as_str()).unwrap()))
-                .collect::<Vec<String>>()
-                .join(", ");
-            println!("%{} = type {{{fields}}}", s.name);
-
-            let mut fields_map = HashMap::new();
+            let mut fields_map = BTreeMap::new();
             for (index, field) in s.fields.iter().enumerate() {
                 fields_map.insert(
                     field.name.clone(),

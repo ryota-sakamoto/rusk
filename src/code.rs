@@ -1,5 +1,5 @@
 use core::panic;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::ast::ComparisonType;
 use crate::hir::{Function, Node, Program, StructField, Type};
@@ -28,6 +28,17 @@ impl<'a> Generator<'a> {
             );
         }
 
+        for (k, v) in &self.program.struct_map {
+            println!(
+                "%{} = type {{{}}}",
+                k,
+                v.values()
+                    .map(|field| format!("{}", field.ty))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+        }
+
         println!("declare i32 @printf(ptr, ...)");
 
         for f in self.program.functions.iter() {
@@ -49,7 +60,7 @@ struct GenerateFunction<'a> {
     index: u64,
     label: u64,
     map: HashMap<&'a str, Value>,
-    struct_map: &'a HashMap<String, HashMap<String, StructField>>,
+    struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     enum_map: &'a HashMap<String, HashMap<String, usize>>,
     has_return: bool,
 }
@@ -57,7 +68,7 @@ struct GenerateFunction<'a> {
 impl<'a> GenerateFunction<'a> {
     fn new(
         function: &'a Function,
-        struct_map: &'a HashMap<String, HashMap<String, StructField>>,
+        struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
         enum_map: &'a HashMap<String, HashMap<String, usize>>,
     ) -> Self {
         Self {

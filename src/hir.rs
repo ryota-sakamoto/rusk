@@ -10,7 +10,7 @@ use crate::ast::{Arg, ComparisonType};
 pub struct Program {
     pub functions: Vec<Function>,
     pub strings: Vec<String>,
-    pub struct_map: HashMap<String, HashMap<String, StructField>>,
+    pub struct_map: BTreeMap<String, BTreeMap<String, StructField>>,
     pub enum_map: HashMap<String, HashMap<String, usize>>,
 }
 
