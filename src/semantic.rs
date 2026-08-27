@@ -71,11 +71,23 @@ impl<'a> Analyzer<'a> {
             struct_map.insert(s.name.clone(), fields_map);
         }
 
+        let mut enum_map = HashMap::new();
+        for e in &self.program.enums {
+            println!("%{} = type {{i32}}", e.name);
+
+            let mut variants_map = HashMap::new();
+            for (index, variant) in e.variants.iter().enumerate() {
+                variants_map.insert(variant.clone(), index);
+            }
+
+            enum_map.insert(e.name.clone(), variants_map);
+        }
+
         HirProgram {
-            enums: self.program.enums.clone(),
             functions,
             strings,
             struct_map,
+            enum_map,
         }
     }
 

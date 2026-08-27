@@ -4,14 +4,14 @@ use std::{
     str::FromStr,
 };
 
-use crate::ast::{Arg, ComparisonType, EnumType};
+use crate::ast::{Arg, ComparisonType};
 
 #[derive(Debug)]
 pub struct Program {
     pub functions: Vec<Function>,
-    pub enums: Vec<EnumType>,
     pub strings: Vec<String>,
     pub struct_map: HashMap<String, HashMap<String, StructField>>,
+    pub enum_map: HashMap<String, HashMap<String, usize>>,
 }
 
 #[derive(PartialEq, Eq, Debug)]

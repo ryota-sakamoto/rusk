@@ -28,23 +28,12 @@ impl<'a> Generator<'a> {
             );
         }
 
-        let mut enum_map = HashMap::new();
-        for e in &self.program.enums {
-            println!("%{} = type {{i32}}", e.name);
-
-            let mut variants_map = HashMap::new();
-            for (index, variant) in e.variants.iter().enumerate() {
-                variants_map.insert(variant.as_str(), index);
-            }
-
-            enum_map.insert(e.name.as_str(), variants_map);
-        }
-
         println!("declare i32 @printf(ptr, ...)");
 
         for f in self.program.functions.iter() {
             println!();
-            let generator = GenerateFunction::new(f, &self.program.struct_map, &enum_map);
+            let generator =
+                GenerateFunction::new(f, &self.program.struct_map, &self.program.enum_map);
             generator.generate();
         }
     }
@@ -61,7 +50,7 @@ struct GenerateFunction<'a> {
     label: u64,
     map: HashMap<&'a str, Value>,
     struct_map: &'a HashMap<String, HashMap<String, StructField>>,
-    enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
+    enum_map: &'a HashMap<String, HashMap<String, usize>>,
     has_return: bool,
 }
 
@@ -69,7 +58,7 @@ impl<'a> GenerateFunction<'a> {
     fn new(
         function: &'a Function,
         struct_map: &'a HashMap<String, HashMap<String, StructField>>,
-        enum_map: &'a HashMap<&'a str, HashMap<&'a str, usize>>,
+        enum_map: &'a HashMap<String, HashMap<String, usize>>,
     ) -> Self {
         Self {
             function,
