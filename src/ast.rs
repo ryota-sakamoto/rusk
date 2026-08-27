@@ -9,6 +9,7 @@ pub struct Program {
     pub functions: Vec<Function>,
     pub structs: Vec<StructType>,
     pub enums: Vec<EnumType>,
+    pub impls: Vec<ImplType>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -42,6 +43,12 @@ pub struct StructType {
 pub struct EnumType {
     pub name: String,
     pub variants: Vec<String>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct ImplType {
+    pub name: String,
+    pub functions: Vec<Function>,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -147,6 +154,7 @@ impl<'a> Parser<'a> {
         let mut functions = Vec::new();
         let mut structs = Vec::new();
         let mut enums = Vec::new();
+        let mut impls = Vec::new();
 
         loop {
             if self.consume(TokenKind::Mod) {
@@ -163,6 +171,8 @@ impl<'a> Parser<'a> {
                 structs.push(self.struct_type());
             } else if self.consume(TokenKind::Enum) {
                 enums.push(self.enum_type());
+            } else if self.consume(TokenKind::Impl) {
+                impls.push(self.impl_type());
             } else {
                 break;
             }
@@ -173,6 +183,7 @@ impl<'a> Parser<'a> {
             functions,
             structs,
             enums,
+            impls,
         }
     }
 
@@ -251,6 +262,23 @@ impl<'a> Parser<'a> {
         }
 
         EnumType { name, variants }
+    }
+
+    fn impl_type(&mut self) -> ImplType {
+        let name = self.identifier().expect("should be identifier");
+        if !self.consume(TokenKind::LBrace) {
+            panic!("should be TokenKind::LBrace");
+        }
+
+        let mut functions = Vec::new();
+        while !self.consume(TokenKind::RBrace) {
+            if !self.consume(TokenKind::Fn) {
+                panic!("should be TokenKind::Fn");
+            }
+            functions.push(self.function());
+        }
+
+        ImplType { name, functions }
     }
 
     fn stmt(&mut self) -> Node {

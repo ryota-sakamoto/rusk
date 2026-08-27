@@ -61,8 +61,23 @@ impl<'a> Analyzer<'a> {
             enum_map.insert(e.name.clone(), variants_map);
         }
 
-        let mut functions = Vec::new();
         let mut strings = Vec::new();
+        let mut functions = Vec::new();
+        for i in &self.program.impls {
+            for f in &i.functions {
+                let mut function_analyzer =
+                    FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map);
+
+                functions.push(HirFunction {
+                    name: format!("{}::{}", i.name, f.name),
+                    args: f.args.clone(),
+                    body: function_analyzer.analyze_node(&f.body),
+                    ty: f.ty.clone(),
+                    mod_name: f.mod_name.clone(),
+                });
+            }
+        }
+
         for f in &self.program.functions {
             let mut function_analyzer =
                 FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map);
@@ -85,6 +100,18 @@ impl<'a> Analyzer<'a> {
     }
 
     fn analyze_functions(&mut self) {
+        for i in &self.program.impls {
+            for f in &i.functions {
+                self.functions.insert(
+                    format!("{}::{}", i.name, f.name),
+                    FunctionMetadata {
+                        args: f.args.clone(),
+                        ty: f.ty.parse().unwrap(),
+                    },
+                );
+            }
+        }
+
         for f in &self.program.functions {
             if self.functions.contains_key(f.name.as_str()) {
                 panic!("{:?} is duplicated", f.name);
@@ -353,6 +380,7 @@ mod tests {
             mods: vec![],
             structs: vec![],
             enums: vec![],
+            impls: vec![],
             functions: Vec::new(),
         });
     }
@@ -364,6 +392,7 @@ mod tests {
             mods: vec![],
             structs: vec![],
             enums: vec![],
+            impls: vec![],
             functions: vec![
                 Function {
                     name: "f".to_owned(),
@@ -397,6 +426,7 @@ mod tests {
             mods: vec![],
             structs: vec![],
             enums: vec![],
+            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -422,6 +452,7 @@ mod tests {
             mods: vec![],
             structs: vec![],
             enums: vec![],
+            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -442,6 +473,7 @@ mod tests {
             mods: vec![],
             structs: vec![],
             enums: vec![],
+            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -462,6 +494,7 @@ mod tests {
             mods: vec![],
             structs: vec![],
             enums: vec![],
+            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -487,6 +520,7 @@ mod tests {
             mods: vec![],
             structs: vec![],
             enums: vec![],
+            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -504,6 +538,7 @@ mod tests {
             mods: vec![],
             structs: vec![],
             enums: vec![],
+            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
