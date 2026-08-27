@@ -1,8 +1,8 @@
 use core::panic;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use crate::ast::ComparisonType;
-use crate::hir::{Function, Node, Program, StructField, Type};
+use crate::hir::{Function, Node, Program, Type};
 
 pub fn generate(program: &Program) {
     let mut generator = Generator::new(program);
@@ -43,8 +43,7 @@ impl<'a> Generator<'a> {
 
         for f in self.program.functions.iter() {
             println!();
-            let generator =
-                GenerateFunction::new(f, &self.program.struct_map, &self.program.enum_map);
+            let generator = GenerateFunction::new(f, &self.program.enum_map);
             generator.generate();
         }
     }
@@ -60,23 +59,17 @@ struct GenerateFunction<'a> {
     index: u64,
     label: u64,
     map: HashMap<&'a str, Value>,
-    struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     enum_map: &'a HashMap<String, HashMap<String, usize>>,
     has_return: bool,
 }
 
 impl<'a> GenerateFunction<'a> {
-    fn new(
-        function: &'a Function,
-        struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
-        enum_map: &'a HashMap<String, HashMap<String, usize>>,
-    ) -> Self {
+    fn new(function: &'a Function, enum_map: &'a HashMap<String, HashMap<String, usize>>) -> Self {
         Self {
             function,
             index: 0,
             label: 0,
             map: HashMap::new(),
-            struct_map,
             enum_map,
             has_return: false,
         }
@@ -277,24 +270,15 @@ impl<'a> GenerateFunction<'a> {
                     ty: ty.clone(),
                 }
             }
-            Node::FieldAccess(node, field) => {
+            Node::FieldAccess(node, index, ty) => {
                 let r = self.generate_node(node);
                 let reg = self.new_reg();
 
-                let field_map = self
-                    .struct_map
-                    .get(r.ty.to_string().strip_prefix("%").unwrap())
-                    .unwrap();
-                let struct_field = &field_map[field.as_str()];
-
-                println!(
-                    "  %r{reg} = extractvalue {} {}, {}",
-                    r.ty, r.name, struct_field.index,
-                );
+                println!("  %r{reg} = extractvalue {} {}, {}", r.ty, r.name, index);
 
                 Value {
                     name: format!("%r{reg}"),
-                    ty: struct_field.ty.clone(),
+                    ty: ty.clone(),
                 }
             }
             Node::Assign(name, r) => {
@@ -435,13 +419,12 @@ impl<'a> GenerateFunction<'a> {
                 let reg = self.new_reg();
                 println!("  %r{reg} = alloca %{name}");
 
-                for (a, n) in args {
+                for (index, n) in args {
                     let r = self.generate_node(n);
                     let field_reg = self.new_reg();
-                    let struct_field = &self.struct_map[name.as_str()][a.as_str()];
                     println!(
                         "  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 {}",
-                        struct_field.index,
+                        index,
                     );
                     println!("  store {} {}, ptr %r{field_reg}", r.ty, r.name);
                 }

@@ -33,20 +33,6 @@ impl<'a> Analyzer<'a> {
     fn analyze(&mut self) -> HirProgram {
         self.analyze_functions();
 
-        let mut functions = Vec::new();
-        let mut strings = Vec::new();
-        for f in &self.program.functions {
-            let mut function_analyzer = FunctionAnalyzer::new(f, &self.functions, &mut strings);
-
-            functions.push(HirFunction {
-                name: f.name.clone(),
-                args: f.args.clone(),
-                body: function_analyzer.analyze_node(&f.body),
-                ty: f.ty.clone(),
-                mod_name: f.mod_name.clone(),
-            });
-        }
-
         let mut struct_map = BTreeMap::new();
         for s in &self.program.structs {
             let mut fields_map = BTreeMap::new();
@@ -73,6 +59,21 @@ impl<'a> Analyzer<'a> {
             }
 
             enum_map.insert(e.name.clone(), variants_map);
+        }
+
+        let mut functions = Vec::new();
+        let mut strings = Vec::new();
+        for f in &self.program.functions {
+            let mut function_analyzer =
+                FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map);
+
+            functions.push(HirFunction {
+                name: f.name.clone(),
+                args: f.args.clone(),
+                body: function_analyzer.analyze_node(&f.body),
+                ty: f.ty.clone(),
+                mod_name: f.mod_name.clone(),
+            });
         }
 
         HirProgram {
@@ -108,6 +109,7 @@ struct FunctionAnalyzer<'a> {
     functions: &'a HashMap<String, FunctionMetadata>,
     let_map: HashMap<&'a str, LetMetadata>,
     strings: &'a mut Vec<String>,
+    struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
 }
 
 struct LetMetadata {
@@ -120,6 +122,7 @@ impl<'a> FunctionAnalyzer<'a> {
         function: &'a Function,
         functions: &'a HashMap<String, FunctionMetadata>,
         strings: &'a mut Vec<String>,
+        struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     ) -> Self {
         let mut let_map = HashMap::new();
         for arg in &function.args {
@@ -136,6 +139,7 @@ impl<'a> FunctionAnalyzer<'a> {
             functions,
             let_map,
             strings,
+            struct_map,
         }
     }
 
@@ -188,7 +192,16 @@ impl<'a> FunctionAnalyzer<'a> {
                 HirNode::RLet(name.clone(), self.let_map[name.as_str()].ty.clone())
             }
             Node::FieldAccess(node, field) => {
-                HirNode::FieldAccess(Box::new(self.analyze_node(node)), field.clone())
+                let rn = self.analyze_node(node);
+                let ty = self.type_of(&rn);
+
+                let struct_field = self
+                    .struct_map
+                    .get(ty.to_string().strip_prefix("%").unwrap())
+                    .and_then(|m| m.get(field))
+                    .unwrap();
+
+                HirNode::FieldAccess(Box::new(rn), struct_field.index, struct_field.ty.clone())
             }
             Node::Call(name, args) => {
                 // TODO: check libc functions
@@ -280,12 +293,12 @@ impl<'a> FunctionAnalyzer<'a> {
             }
             Node::Not(r) => HirNode::Not(Box::new(self.analyze_node(r))),
             Node::Struct(name, fields) => {
-                let mut map = BTreeMap::new();
-                for (k, f) in fields {
-                    map.insert(k.clone(), self.analyze_node(f));
+                let mut args = Vec::new();
+                for (index, (_, f)) in fields.iter().enumerate() {
+                    args.push((index, self.analyze_node(f)));
                 }
 
-                HirNode::Struct(name.clone(), map)
+                HirNode::Struct(name.clone(), args)
             }
             Node::Enum(name, variant) => HirNode::Enum(name.clone(), variant.clone()),
             Node::Match(l, r) => HirNode::Match(
@@ -314,7 +327,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Sub(_, _) => Type::Int,
             HirNode::Mul(_, _) => Type::Int,
             HirNode::RLet(_, ty) => ty.clone(),
-            HirNode::FieldAccess(_, _) => Type::Int,
+            HirNode::FieldAccess(_, _, ty) => ty.clone(),
             HirNode::Call(_, _, ty) => ty.clone(),
             HirNode::Struct(name, _) => Type::Struct(name.clone()),
             HirNode::Enum(_, _) => Type::Int,

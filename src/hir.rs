@@ -47,7 +47,7 @@ pub enum Node {
     Ret(Box<Node>),
     Let(String, Type, Box<Node>, bool),
     RLet(String, Type),
-    FieldAccess(Box<Node>, String),
+    FieldAccess(Box<Node>, usize, Type),
     Assign(String, Box<Node>),
     Call(String, Vec<Node>, Type),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
@@ -57,7 +57,7 @@ pub enum Node {
     While(Box<Node>, Box<Node>),
     Block(Vec<Node>),
     Not(Box<Node>),
-    Struct(String, BTreeMap<String, Node>),
+    Struct(String, Vec<(usize, Node)>),
     Enum(String, String),
     Match(Box<Node>, Vec<(Node, Node)>),
 }
