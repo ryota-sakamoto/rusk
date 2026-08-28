@@ -164,14 +164,14 @@ impl<'a> Parser<'a> {
                 }
 
                 mods.push(identifier);
-            } else if self.consume(TokenKind::Fn) {
+            } else if self.peek(TokenKind::Fn) {
                 let f = self.function();
                 functions.push(f);
-            } else if self.consume(TokenKind::Struct) {
+            } else if self.peek(TokenKind::Struct) {
                 structs.push(self.struct_type());
-            } else if self.consume(TokenKind::Enum) {
+            } else if self.peek(TokenKind::Enum) {
                 enums.push(self.enum_type());
-            } else if self.consume(TokenKind::Impl) {
+            } else if self.peek(TokenKind::Impl) {
                 impls.push(self.impl_type());
             } else {
                 break;
@@ -188,6 +188,10 @@ impl<'a> Parser<'a> {
     }
 
     fn function(&mut self) -> Function {
+        if !self.consume(TokenKind::Fn) {
+            panic!("should be TokenKind::Fn");
+        }
+
         let name = self.identifier().expect("should be identifier");
         if !self.consume(TokenKind::LParen) {
             panic!("should be TokenKind::LPAREN");
@@ -226,6 +230,10 @@ impl<'a> Parser<'a> {
     }
 
     fn struct_type(&mut self) -> StructType {
+        if !self.consume(TokenKind::Struct) {
+            panic!("should be TokenKind::Struct");
+        }
+
         let name = self.identifier().expect("should be identifier");
         if !self.consume(TokenKind::LBrace) {
             panic!("should be TokenKind::LBrace");
@@ -249,6 +257,10 @@ impl<'a> Parser<'a> {
     }
 
     fn enum_type(&mut self) -> EnumType {
+        if !self.consume(TokenKind::Enum) {
+            panic!("should be TokenKind::Enum");
+        }
+
         let name = self.identifier().expect("should be identifier");
         if !self.consume(TokenKind::LBrace) {
             panic!("should be TokenKind::LBrace");
@@ -265,6 +277,10 @@ impl<'a> Parser<'a> {
     }
 
     fn impl_type(&mut self) -> ImplType {
+        if !self.consume(TokenKind::Impl) {
+            panic!("should be TokenKind::Impl");
+        }
+
         let name = self.identifier().expect("should be identifier");
         if !self.consume(TokenKind::LBrace) {
             panic!("should be TokenKind::LBrace");
@@ -272,9 +288,6 @@ impl<'a> Parser<'a> {
 
         let mut functions = Vec::new();
         while !self.consume(TokenKind::RBrace) {
-            if !self.consume(TokenKind::Fn) {
-                panic!("should be TokenKind::Fn");
-            }
             functions.push(self.function());
         }
 
