@@ -71,6 +71,7 @@ pub enum Node {
     RLet(String),
     Assign(String, Box<Node>),
     Call(String, Vec<Node>),
+    MethodCall(Box<Node>, String, Vec<Node>),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
     And(Box<Node>, Box<Node>),
     Or(Box<Node>, Box<Node>),
@@ -201,6 +202,16 @@ impl<'a> Parser<'a> {
         let mut args = Vec::new();
 
         while !self.consume(TokenKind::RParen) {
+            if self.consume(TokenKind::SelfValue) {
+                args.push(Arg {
+                    name: "self".to_owned(),
+                    // TODO: use actual name
+                    ty: "Test".to_owned(),
+                });
+                self.consume(TokenKind::Comma);
+                continue;
+            }
+
             let name = self.identifier().expect("should be identifier");
             if !self.consume(TokenKind::Colon) {
                 panic!("should be TokenKind::COLON");
@@ -485,12 +496,23 @@ impl<'a> Parser<'a> {
                 None
             };
 
+            let field = if self.consume(TokenKind::Dot) {
+                let field = self.identifier().expect("should be identifier");
+                Some(field)
+            } else {
+                None
+            };
+
             if self.consume(TokenKind::LParen) {
                 let mut args = Vec::new();
                 while !self.consume(TokenKind::RParen) {
                     let expr = self.expr();
                     args.push(expr);
                     self.consume(TokenKind::Comma);
+                }
+
+                if let Some(field) = field {
+                    return Node::MethodCall(Box::new(Node::RLet(identifier)), field, args);
                 }
 
                 return Node::Call(
@@ -500,6 +522,10 @@ impl<'a> Parser<'a> {
                     ),
                     args,
                 );
+            }
+
+            if let Some(field) = field {
+                return Node::FieldAccess(Box::new(Node::RLet(identifier)), field);
             }
 
             if self.allow_struct && self.consume(TokenKind::LBrace) {
@@ -523,11 +549,6 @@ impl<'a> Parser<'a> {
                 return Node::Assign(identifier, Box::new(self.expr()));
             }
 
-            if self.consume(TokenKind::Dot) {
-                let field = self.identifier().expect("should be identifier");
-                return Node::FieldAccess(Box::new(Node::RLet(identifier)), field);
-            }
-
             if let Some(m) = mod_function {
                 return Node::Enum(identifier, m);
             }
@@ -545,6 +566,14 @@ impl<'a> Parser<'a> {
 
         if self.consume(TokenKind::Break) {
             return Node::Break;
+        }
+
+        if self.consume(TokenKind::SelfValue) {
+            if self.consume(TokenKind::Dot) {
+                let field = self.identifier().expect("should be identifier");
+                return Node::FieldAccess(Box::new(Node::RLet("self".to_owned())), field);
+            }
+            return Node::RLet("self".to_owned());
         }
 
         self.literal()

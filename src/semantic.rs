@@ -17,6 +17,7 @@ struct Analyzer<'a> {
     functions: HashMap<String, FunctionMetadata>,
 }
 
+#[derive(Debug)]
 struct FunctionMetadata {
     args: Vec<Arg>,
     ty: Type,
@@ -259,6 +260,35 @@ impl<'a> FunctionAnalyzer<'a> {
                     args.iter().map(|v| self.analyze_node(v)).collect(),
                     f.ty.clone(),
                 )
+            }
+            Node::MethodCall(node, method, args) => {
+                let s = self.analyze_node(node);
+                let s_ty = self.type_of(&s);
+                let name = format!(
+                    "{}::{}",
+                    s_ty.to_string().strip_prefix("%").unwrap(),
+                    method
+                );
+
+                let f = self
+                    .functions
+                    .get(name.as_str())
+                    .unwrap_or_else(|| panic!("{:?} is not defined", name));
+
+                if f.args.len() - 1 != args.len() {
+                    panic!(
+                        "{:?} expects {} args, but specified {} args",
+                        name,
+                        f.args.len() - 1,
+                        args.len()
+                    );
+                }
+
+                let mut call_args = Vec::new();
+                call_args.push(s);
+                call_args.extend(args.iter().map(|v| self.analyze_node(v)));
+
+                HirNode::Call(name.clone(), call_args, f.ty.clone())
             }
             Node::Assign(s, b) => {
                 let rn = self.analyze_node(b);
