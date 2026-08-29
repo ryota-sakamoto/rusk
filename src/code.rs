@@ -62,6 +62,7 @@ struct GenerateFunction<'a> {
     enum_map: &'a HashMap<String, HashMap<String, usize>>,
     has_return: bool,
     terminated: bool,
+    next_end_label: Option<String>,
 }
 
 impl<'a> GenerateFunction<'a> {
@@ -74,6 +75,7 @@ impl<'a> GenerateFunction<'a> {
             enum_map,
             has_return: false,
             terminated: false,
+            next_end_label: None,
         }
     }
 
@@ -398,10 +400,21 @@ impl<'a> GenerateFunction<'a> {
                 );
 
                 println!("{while_label}:");
+                self.next_end_label = Some(whileend_label);
                 self.generate_node(body);
                 println!("  br label %{cond_label}");
 
                 println!("whileend_{label}:");
+
+                Value {
+                    name: String::new(),
+                    ty: Type::Int,
+                }
+            }
+            Node::Break => {
+                self.terminated = true;
+                let label = self.next_end_label.clone().unwrap();
+                println!("  br label %{label}");
 
                 Value {
                     name: String::new(),

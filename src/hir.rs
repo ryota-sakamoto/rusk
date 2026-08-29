@@ -55,6 +55,7 @@ pub enum Node {
     Or(Box<Node>, Box<Node>, Type),
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     While(Box<Node>, Box<Node>),
+    Break,
     Block(Vec<Node>),
     Not(Box<Node>),
     Struct(String, Vec<(usize, Node)>),

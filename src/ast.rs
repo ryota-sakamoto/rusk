@@ -76,6 +76,7 @@ pub enum Node {
     Or(Box<Node>, Box<Node>),
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     While(Box<Node>, Box<Node>),
+    Break,
     Block(Vec<Node>),
     Not(Box<Node>),
     Struct(String, BTreeMap<String, Node>),
@@ -534,6 +535,10 @@ impl<'a> Parser<'a> {
                 panic!("should be TokenKind::RPAREN")
             }
             return node;
+        }
+
+        if self.consume(TokenKind::Break) {
+            return Node::Break;
         }
 
         self.literal()
