@@ -323,6 +323,12 @@ impl<'a> Parser<'a> {
             return Node::While(Box::new(node), Box::new(body));
         }
 
+        if self.consume(TokenKind::Loop) {
+            let body = self.block();
+
+            return Node::While(Box::new(Node::Bool(true)), Box::new(body));
+        }
+
         if self.consume(TokenKind::Ret) {
             let node = self.expr();
             if !self.consume(TokenKind::Semi) {
