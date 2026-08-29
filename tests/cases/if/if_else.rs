@@ -5,7 +5,6 @@ fn f(n: i32) -> i32 {
     } else {
         return 5;
     }
-    return 0;
 }
 
 fn main() {

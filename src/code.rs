@@ -61,6 +61,7 @@ struct GenerateFunction<'a> {
     map: HashMap<&'a str, Value>,
     enum_map: &'a HashMap<String, HashMap<String, usize>>,
     has_return: bool,
+    terminated: bool,
 }
 
 impl<'a> GenerateFunction<'a> {
@@ -72,6 +73,7 @@ impl<'a> GenerateFunction<'a> {
             map: HashMap::new(),
             enum_map,
             has_return: false,
+            terminated: false,
         }
     }
 
@@ -207,6 +209,7 @@ impl<'a> GenerateFunction<'a> {
             Node::Ret(n) => {
                 self.has_return = true;
                 let ret = self.generate_node(n);
+                self.terminated = true;
                 println!("  ret {} {}", ret.ty, ret.name);
                 Value {
                     name: String::new(),
@@ -341,28 +344,38 @@ impl<'a> GenerateFunction<'a> {
                 let ln = self.generate_node(l);
                 let label = self.new_label();
 
-                let else_label = if ebody.is_some() {
-                    format!("elseif_{label}")
+                if ebody.is_some() {
+                    println!(
+                        "  br i1 {}, label %if_{label}, label %else_{label}",
+                        ln.name
+                    );
                 } else {
-                    format!("else_{label}")
-                };
-
-                println!(
-                    "  br i1 {}, label %if_{label}, label %{else_label}",
-                    ln.name
-                );
-
-                println!("  if_{label}:");
-                self.generate_node(body);
-                println!("  br label %else_{label}");
-
-                if let Some(ebody) = ebody {
-                    println!("  elseif_{label}:");
-                    self.generate_node(ebody);
-                    println!("  br label %else_{label}");
+                    println!(
+                        "  br i1 {}, label %if_{label}, label %ifafter_{label}",
+                        ln.name
+                    );
                 }
 
-                println!("  else_{label}:");
+                self.terminated = false;
+                println!("if_{label}:");
+                self.generate_node(body);
+
+                if !self.terminated {
+                    println!("  br label %ifafter_{label}");
+                }
+
+                self.terminated = false;
+                if let Some(ebody) = ebody {
+                    println!("else_{label}:");
+                    self.generate_node(ebody);
+                    if !self.terminated {
+                        println!("  br label %ifafter_{label}");
+                    }
+                }
+
+                if !self.terminated {
+                    println!("ifafter_{label}:");
+                }
 
                 Value {
                     name: String::new(),
