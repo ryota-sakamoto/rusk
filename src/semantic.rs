@@ -291,10 +291,10 @@ impl<'a> FunctionAnalyzer<'a> {
                 HirNode::Call(name.clone(), call_args, f.ty.clone())
             }
             Node::Assign(s, b) => {
-                let sn = self.analyze_node(s);
+                let ln = self.analyze_node(s);
                 let rn = self.analyze_node(b);
 
-                let name = self.get_let_name(&sn);
+                let name = self.get_let_name(&ln);
 
                 let v = self
                     .let_map
@@ -304,12 +304,13 @@ impl<'a> FunctionAnalyzer<'a> {
                     panic!("{:?} should be mut", name);
                 }
 
+                let ln_ty = self.type_of(&ln);
                 let rn_ty = self.type_of(&rn);
-                if rn_ty != v.ty {
-                    panic!("expected {}, found {}", v.ty, rn_ty);
+                if ln_ty != rn_ty {
+                    panic!("expected {}, found {}", ln_ty, rn_ty);
                 }
 
-                HirNode::Assign(Box::new(sn), Box::new(rn))
+                HirNode::Assign(Box::new(ln), Box::new(rn))
             }
             Node::If(l, r, e) => HirNode::If(
                 Box::new(self.analyze_node(l)),
@@ -390,28 +391,14 @@ impl<'a> FunctionAnalyzer<'a> {
                 let ty = self.type_of(&v);
                 HirNode::ArrayAccess(Box::new(v), Box::new(self.analyze_node(index)), ty.inner())
             }
-            Node::ArrayAssign(name, index, right) => {
-                let v = self
-                    .let_map
-                    .get(name.as_str())
-                    .unwrap_or_else(|| panic!("{:?} is not defined", name));
-                if !v.is_mut {
-                    panic!("{:?} should be mut", name);
-                }
-
-                HirNode::ArrayAssign(
-                    name.clone(),
-                    Box::new(self.analyze_node(index)),
-                    Box::new(self.analyze_node(right)),
-                )
-            }
         }
     }
 
     fn get_let_name(&mut self, node: &HirNode) -> String {
         match node {
             HirNode::RLet(name, _) => name.to_string(),
-            _ => unimplemented!(),
+            HirNode::ArrayAccess(v, _, _) => self.get_let_name(v),
+            _ => unimplemented!("{:?}", node),
         }
     }
 
@@ -430,6 +417,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Enum(_, _) => Type::Int,
             HirNode::Comparison(_, _, _) => Type::Bool,
             HirNode::Array(data, ty) => Type::Array(Box::new(ty.clone()), data.len()),
+            HirNode::ArrayAccess(_, _, ty) => ty.clone(),
             _ => panic!("{:?} should be implemented", node),
         }
     }

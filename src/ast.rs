@@ -87,7 +87,6 @@ pub enum Node {
     FieldAccess(Box<Node>, String),
     Array(Vec<Node>),
     ArrayAccess(Box<Node>, Box<Node>),
-    ArrayAssign(String, Box<Node>, Box<Node>),
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -535,7 +534,13 @@ impl<'a> Parser<'a> {
                 }
 
                 if self.consume(TokenKind::Assign) {
-                    return Node::ArrayAssign(identifier, Box::new(index), Box::new(self.expr()));
+                    return Node::Assign(
+                        Box::new(Node::ArrayAccess(
+                            Box::new(Node::RLet(identifier)),
+                            Box::new(index),
+                        )),
+                        Box::new(self.expr()),
+                    );
                 }
 
                 return Node::ArrayAccess(Box::new(Node::RLet(identifier)), Box::new(index));

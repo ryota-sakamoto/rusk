@@ -568,28 +568,29 @@ impl<'a> GenerateFunction<'a> {
                     ty: ty.clone(),
                 }
             }
-            Node::ArrayAssign(name, index, right) => {
-                let index = self.generate_node(index);
-                let r = self.generate_node(right);
+        }
+    }
 
+    fn generate_assign(&mut self, node: &'a Node) -> Value {
+        match node {
+            Node::RLet(name, _) => self.map[name.clone().as_str()].clone(),
+            Node::ArrayAccess(node, index, _) => {
                 let reg = self.new_reg();
-                let l = self.map.get(name.as_str()).unwrap();
+                let l = self.generate_assign(node);
+                let i = self.generate_node(index);
+
                 println!(
                     "  %r{reg} = getelementptr {}, ptr {}, i32 0, i32 {}",
                     l.ty.inner(),
                     l.name,
-                    index.name,
+                    i.name,
                 );
-                println!("  store {} {}, ptr %r{reg}", r.ty, r.name);
 
-                r
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Ptr(Box::new(Type::Int)),
+                }
             }
-        }
-    }
-
-    fn generate_assign(&self, node: &'a Node) -> Value {
-        match node {
-            Node::RLet(name, _) => self.map[name.clone().as_str()].clone(),
             _ => unimplemented!("{:?} cannot be assigned", node),
         }
     }
