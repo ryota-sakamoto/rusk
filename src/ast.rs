@@ -547,6 +547,13 @@ impl<'a> Parser<'a> {
             }
 
             if let Some(field) = field {
+                if self.consume(TokenKind::Assign) {
+                    return Node::Assign(
+                        Box::new(Node::FieldAccess(Box::new(Node::RLet(identifier)), field)),
+                        Box::new(self.expr()),
+                    );
+                }
+
                 return Node::FieldAccess(Box::new(Node::RLet(identifier)), field);
             }
 

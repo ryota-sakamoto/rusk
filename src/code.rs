@@ -591,6 +591,22 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Ptr(Box::new(Type::Int)),
                 }
             }
+            Node::FieldAccess(node, index, ty) => {
+                let reg = self.new_reg();
+                let l = self.generate_assign(node);
+
+                println!(
+                    "  %r{reg} = getelementptr {}, ptr {}, i32 0, i32 {}",
+                    l.ty.inner(),
+                    l.name,
+                    index,
+                );
+
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Ptr(Box::new(ty.clone())),
+                }
+            }
             _ => unimplemented!("{:?} cannot be assigned", node),
         }
     }

@@ -398,6 +398,7 @@ impl<'a> FunctionAnalyzer<'a> {
         match node {
             HirNode::RLet(name, _) => name.to_string(),
             HirNode::ArrayAccess(v, _, _) => self.get_let_name(v),
+            HirNode::FieldAccess(v, _, _) => self.get_let_name(v),
             _ => unimplemented!("{:?}", node),
         }
     }
