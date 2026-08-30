@@ -229,25 +229,27 @@ impl<'a> GenerateFunction<'a> {
                     call_args.push(ret);
                 }
 
-                let reg = self.new_reg();
-                if !call_args.is_empty() {
-                    println!(
-                        "  %r{} = call {} @\"{}\"({})",
-                        reg,
-                        ty,
-                        name,
-                        call_args
-                            .iter()
-                            .map(|reg| format!("{} {}", reg.ty, reg.name))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    );
+                let res = if *ty != Type::Void {
+                    let reg = self.new_reg();
+                    Some(format!("%r{reg}"))
                 } else {
-                    println!("  %r{} = call {} @\"{}\"()", reg, ty, name);
-                }
+                    None
+                };
+
+                println!(
+                    "  {}call {} @\"{}\"({})",
+                    res.clone().map_or(String::new(), |v| format!("{v} = ")),
+                    ty,
+                    name,
+                    call_args
+                        .iter()
+                        .map(|reg| format!("{} {}", reg.ty, reg.name))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                );
 
                 Value {
-                    name: format!("%r{reg}"),
+                    name: res.unwrap_or(String::new()),
                     ty: ty.clone(),
                 }
             }

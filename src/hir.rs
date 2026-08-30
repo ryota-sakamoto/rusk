@@ -74,6 +74,7 @@ pub enum Type {
     Ptr(Box<Type>),
     Struct(String),
     Array(Box<Type>, usize),
+    Void,
 }
 
 impl FromStr for Type {
@@ -83,6 +84,7 @@ impl FromStr for Type {
             "i32" => Ok(Type::Int),
             "i8" => Ok(Type::Int8),
             "bool" => Ok(Type::Bool),
+            "void" => Ok(Type::Void),
             _ => Ok(Type::Struct(value.to_owned())),
         }
     }
@@ -107,6 +109,7 @@ impl Display for Type {
                 Type::Int => "i32".to_owned(),
                 Type::Int8 => "i8".to_owned(),
                 Type::Bool => "i1".to_owned(),
+                Type::Void => "void".to_owned(),
                 Type::Ptr(_) => "ptr".to_owned(),
                 Type::Struct(name) => format!("%{name}"),
                 Type::Array(ty, len) => format!("[{} x {}]", len, ty),
