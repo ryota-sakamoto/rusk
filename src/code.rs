@@ -49,6 +49,7 @@ impl<'a> Generator<'a> {
     }
 }
 
+#[derive(Clone, Debug)]
 struct Value {
     name: String,
     ty: Type,
@@ -288,10 +289,10 @@ impl<'a> GenerateFunction<'a> {
                     ty: ty.clone(),
                 }
             }
-            Node::Assign(name, r) => {
+            Node::Assign(left, r) => {
+                let ln = self.generate_assign(left);
                 let rn = self.generate_node(r);
-                let l = self.map.get(name.as_str()).unwrap();
-                println!("  store {} {}, ptr {}", rn.ty, rn.name, l.name);
+                println!("  store {} {}, ptr {}", rn.ty, rn.name, ln.name);
 
                 rn
             }
@@ -583,6 +584,13 @@ impl<'a> GenerateFunction<'a> {
 
                 r
             }
+        }
+    }
+
+    fn generate_assign(&self, node: &'a Node) -> Value {
+        match node {
+            Node::RLet(name, _) => self.map[name.clone().as_str()].clone(),
+            _ => unimplemented!("{:?} cannot be assigned", node),
         }
     }
 }

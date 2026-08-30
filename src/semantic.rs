@@ -291,14 +291,17 @@ impl<'a> FunctionAnalyzer<'a> {
                 HirNode::Call(name.clone(), call_args, f.ty.clone())
             }
             Node::Assign(s, b) => {
+                let sn = self.analyze_node(s);
                 let rn = self.analyze_node(b);
+
+                let name = self.get_let_name(&sn);
 
                 let v = self
                     .let_map
-                    .get(s.as_str())
-                    .unwrap_or_else(|| panic!("{:?} is not defined", s));
+                    .get(name.as_str())
+                    .unwrap_or_else(|| panic!("{:?} is not defined", name));
                 if !v.is_mut {
-                    panic!("{:?} should be mut", s);
+                    panic!("{:?} should be mut", name);
                 }
 
                 let rn_ty = self.type_of(&rn);
@@ -306,7 +309,7 @@ impl<'a> FunctionAnalyzer<'a> {
                     panic!("expected {}, found {}", v.ty, rn_ty);
                 }
 
-                HirNode::Assign(s.clone(), Box::new(rn))
+                HirNode::Assign(Box::new(sn), Box::new(rn))
             }
             Node::If(l, r, e) => HirNode::If(
                 Box::new(self.analyze_node(l)),
@@ -402,6 +405,13 @@ impl<'a> FunctionAnalyzer<'a> {
                     Box::new(self.analyze_node(right)),
                 )
             }
+        }
+    }
+
+    fn get_let_name(&mut self, node: &HirNode) -> String {
+        match node {
+            HirNode::RLet(name, _) => name.to_string(),
+            _ => unimplemented!(),
         }
     }
 
@@ -519,7 +529,7 @@ mod tests {
                 args: Vec::new(),
                 body: Node::Block(vec![
                     Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), false),
-                    Node::Assign("a".to_owned(), Box::new(Node::Num(3))),
+                    Node::Assign(Box::new(Node::RLet("a".to_owned())), Box::new(Node::Num(3))),
                 ]),
                 ty: "void".to_owned(),
                 mod_name: None,
@@ -540,7 +550,10 @@ mod tests {
                 args: Vec::new(),
                 body: Node::Block(vec![
                     Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), true),
-                    Node::Assign("a".to_owned(), Box::new(Node::Bool(false))),
+                    Node::Assign(
+                        Box::new(Node::RLet("a".to_owned())),
+                        Box::new(Node::Bool(false)),
+                    ),
                 ]),
                 ty: "void".to_owned(),
                 mod_name: None,

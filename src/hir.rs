@@ -48,7 +48,7 @@ pub enum Node {
     Let(String, Type, Box<Node>, bool),
     RLet(String, Type),
     FieldAccess(Box<Node>, usize, Type),
-    Assign(String, Box<Node>),
+    Assign(Box<Node>, Box<Node>),
     Call(String, Vec<Node>, Type),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
     And(Box<Node>, Box<Node>, Type),

@@ -69,7 +69,7 @@ pub enum Node {
     Ret(Box<Node>),
     Let(String, Option<String>, Box<Node>, bool),
     RLet(String),
-    Assign(String, Box<Node>),
+    Assign(Box<Node>, Box<Node>),
     Call(String, Vec<Node>),
     MethodCall(Box<Node>, String, Vec<Node>),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
@@ -563,7 +563,7 @@ impl<'a> Parser<'a> {
             }
 
             if self.consume(TokenKind::Assign) {
-                return Node::Assign(identifier, Box::new(self.expr()));
+                return Node::Assign(Box::new(Node::RLet(identifier)), Box::new(self.expr()));
             }
 
             if let Some(m) = mod_function {
