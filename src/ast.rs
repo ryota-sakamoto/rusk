@@ -78,6 +78,7 @@ pub enum Node {
     If(Box<Node>, Box<Node>, Option<Box<Node>>),
     While(Box<Node>, Box<Node>),
     Break,
+    Continue,
     Block(Vec<Node>),
     Not(Box<Node>),
     Struct(String, BTreeMap<String, Node>),
@@ -566,6 +567,10 @@ impl<'a> Parser<'a> {
 
         if self.consume(TokenKind::Break) {
             return Node::Break;
+        }
+
+        if self.consume(TokenKind::Continue) {
+            return Node::Continue;
         }
 
         if self.consume(TokenKind::SelfValue) {

@@ -323,6 +323,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 Box::new(self.analyze_node(r)),
             ),
             Node::Break => HirNode::Break,
+            Node::Continue => HirNode::Continue,
             Node::Block(b) => HirNode::Block(b.iter().map(|v| self.analyze_node(v)).collect()),
             Node::Ret(r) => HirNode::Ret(Box::new(self.analyze_node(r))),
             Node::And(l, r) => {
