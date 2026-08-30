@@ -56,7 +56,7 @@ impl<'a> Analyzer<'a> {
 
             let mut variants_map = HashMap::new();
             for (index, variant) in e.variants.iter().enumerate() {
-                variants_map.insert(variant.clone(), index);
+                variants_map.insert(variant.name.clone(), index);
             }
 
             enum_map.insert(e.name.clone(), variants_map);

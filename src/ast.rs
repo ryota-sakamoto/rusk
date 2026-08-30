@@ -42,7 +42,12 @@ pub struct StructType {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct EnumType {
     pub name: String,
-    pub variants: Vec<String>,
+    pub variants: Vec<EnumVariant>,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct EnumVariant {
+    pub name: String,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -285,7 +290,7 @@ impl<'a> Parser<'a> {
         while !self.consume(TokenKind::RBrace) {
             let name = self.identifier().expect("should be identifier");
             self.consume(TokenKind::Comma);
-            variants.push(name);
+            variants.push(EnumVariant { name });
         }
 
         EnumType { name, variants }
