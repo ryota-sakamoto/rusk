@@ -567,6 +567,22 @@ impl<'a> GenerateFunction<'a> {
                     ty: ty.clone(),
                 }
             }
+            Node::ArrayAssign(name, index, right) => {
+                let index = self.generate_node(index);
+                let r = self.generate_node(right);
+
+                let reg = self.new_reg();
+                let l = self.map.get(name.as_str()).unwrap();
+                println!(
+                    "  %r{reg} = getelementptr {}, ptr {}, i32 0, i32 {}",
+                    l.ty.inner(),
+                    l.name,
+                    index.name,
+                );
+                println!("  store {} {}, ptr %r{reg}", r.ty, r.name);
+
+                r
+            }
         }
     }
 }

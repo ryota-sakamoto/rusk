@@ -64,6 +64,7 @@ pub enum Node {
     Match(Box<Node>, Vec<(Node, Node)>),
     Array(Vec<Node>, Type),
     ArrayAccess(Box<Node>, Box<Node>, Type),
+    ArrayAssign(String, Box<Node>, Box<Node>),
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -92,6 +93,7 @@ impl Type {
     pub fn inner(&self) -> Type {
         match self {
             Type::Array(ty, _) => *ty.clone(),
+            Type::Ptr(ty) => *ty.clone(),
             _ => unimplemented!(),
         }
     }

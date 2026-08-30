@@ -387,6 +387,21 @@ impl<'a> FunctionAnalyzer<'a> {
                 let ty = self.type_of(&v);
                 HirNode::ArrayAccess(Box::new(v), Box::new(self.analyze_node(index)), ty.inner())
             }
+            Node::ArrayAssign(name, index, right) => {
+                let v = self
+                    .let_map
+                    .get(name.as_str())
+                    .unwrap_or_else(|| panic!("{:?} is not defined", name));
+                if !v.is_mut {
+                    panic!("{:?} should be mut", name);
+                }
+
+                HirNode::ArrayAssign(
+                    name.clone(),
+                    Box::new(self.analyze_node(index)),
+                    Box::new(self.analyze_node(right)),
+                )
+            }
         }
     }
 
