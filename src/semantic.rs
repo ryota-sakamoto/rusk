@@ -374,6 +374,19 @@ impl<'a> FunctionAnalyzer<'a> {
                 HirNode::String(self.strings.len() - 1)
             }
             Node::Bool(b) => HirNode::Bool(*b),
+            Node::Array(data) => {
+                let nodes = data
+                    .iter()
+                    .map(|v| self.analyze_node(v))
+                    .collect::<Vec<_>>();
+                let ty = self.type_of(&nodes[0]);
+                HirNode::Array(nodes, ty)
+            }
+            Node::ArrayAccess(node, index) => {
+                let v = self.analyze_node(node);
+                let ty = self.type_of(&v);
+                HirNode::ArrayAccess(Box::new(v), Box::new(self.analyze_node(index)), ty.inner())
+            }
         }
     }
 
@@ -391,6 +404,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Struct(name, _) => Type::Struct(name.clone()),
             HirNode::Enum(_, _) => Type::Int,
             HirNode::Comparison(_, _, _) => Type::Bool,
+            HirNode::Array(data, ty) => Type::Array(Box::new(ty.clone()), data.len()),
             _ => panic!("{:?} should be implemented", node),
         }
     }

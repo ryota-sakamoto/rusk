@@ -62,6 +62,8 @@ pub enum Node {
     Struct(String, Vec<(usize, Node)>),
     Enum(String, String),
     Match(Box<Node>, Vec<(Node, Node)>),
+    Array(Vec<Node>, Type),
+    ArrayAccess(Box<Node>, Box<Node>, Type),
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -71,6 +73,7 @@ pub enum Type {
     Bool,
     Ptr(Box<Type>),
     Struct(String),
+    Array(Box<Type>, usize),
 }
 
 impl FromStr for Type {
@@ -81,6 +84,15 @@ impl FromStr for Type {
             "i8" => Ok(Type::Int8),
             "bool" => Ok(Type::Bool),
             _ => Ok(Type::Struct(value.to_owned())),
+        }
+    }
+}
+
+impl Type {
+    pub fn inner(&self) -> Type {
+        match self {
+            Type::Array(ty, _) => *ty.clone(),
+            _ => unimplemented!(),
         }
     }
 }
@@ -96,6 +108,7 @@ impl Display for Type {
                 Type::Bool => "i1".to_owned(),
                 Type::Ptr(_) => "ptr".to_owned(),
                 Type::Struct(name) => format!("%{name}"),
+                Type::Array(ty, len) => format!("[{} x {}]", len, ty),
             }
         )
     }

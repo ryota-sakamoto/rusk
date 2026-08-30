@@ -85,6 +85,8 @@ pub enum Node {
     Enum(String, String),
     Match(Box<Node>, Vec<(Node, Node)>),
     FieldAccess(Box<Node>, String),
+    Array(Vec<Node>),
+    ArrayAccess(Box<Node>, Box<Node>),
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -525,6 +527,15 @@ impl<'a> Parser<'a> {
                 );
             }
 
+            if self.consume(TokenKind::LBracket) {
+                let index = self.expr();
+                if !self.consume(TokenKind::RBracket) {
+                    panic!("should be TokenKind::RBracket");
+                }
+
+                return Node::ArrayAccess(Box::new(Node::RLet(identifier)), Box::new(index));
+            }
+
             if let Some(field) = field {
                 return Node::FieldAccess(Box::new(Node::RLet(identifier)), field);
             }
@@ -579,6 +590,15 @@ impl<'a> Parser<'a> {
                 return Node::FieldAccess(Box::new(Node::RLet("self".to_owned())), field);
             }
             return Node::RLet("self".to_owned());
+        }
+
+        if self.consume(TokenKind::LBracket) {
+            let mut data = Vec::new();
+            while !self.consume(TokenKind::RBracket) {
+                data.push(self.expr());
+                self.consume(TokenKind::Comma);
+            }
+            return Node::Array(data);
         }
 
         self.literal()

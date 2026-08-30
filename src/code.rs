@@ -528,6 +528,45 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Int,
                 }
             }
+            Node::Array(data, ty) => {
+                let reg = self.new_reg();
+                let array_ty = Type::Array(Box::new(ty.clone()), data.len());
+                println!("  %r{reg} = alloca {}", array_ty);
+
+                for (index, v) in data.iter().enumerate() {
+                    let node = self.generate_node(v);
+                    let field_reg = self.new_reg();
+
+                    println!(
+                        "  %r{field_reg} = getelementptr {}, ptr %r{reg}, i32 0, i32 {}",
+                        array_ty, index,
+                    );
+                    println!("  store {} {}, ptr %r{field_reg}", node.ty, node.name);
+                }
+
+                let value_reg = self.new_reg();
+                println!("  %r{value_reg} = load [{} x i32], ptr %r{reg}", data.len());
+
+                Value {
+                    name: format!("%r{value_reg}"),
+                    ty: Type::Array(Box::new(Type::Int), data.len()),
+                }
+            }
+            Node::ArrayAccess(node, index, ty) => {
+                let array = self.generate_node(node);
+                let index = self.generate_node(index);
+
+                let reg = self.new_reg();
+                println!(
+                    "  %r{reg} = extractvalue {} {}, {}",
+                    array.ty, array.name, index.name,
+                );
+
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: ty.clone(),
+                }
+            }
         }
     }
 }

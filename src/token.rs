@@ -8,6 +8,8 @@ pub enum TokenKind {
     RParen,
     LBrace,
     RBrace,
+    LBracket,
+    RBracket,
     Mod,
     Fn,
     Semi,
@@ -83,6 +85,8 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             ')' => push_token(TokenKind::RParen),
             '{' => push_token(TokenKind::LBrace),
             '}' => push_token(TokenKind::RBrace),
+            '[' => push_token(TokenKind::LBracket),
+            ']' => push_token(TokenKind::RBracket),
             ';' => push_token(TokenKind::Semi),
             ':' => {
                 if chars.next_if_eq(&':').is_some() {
