@@ -1,4 +1,4 @@
-use std::{env::args, fs, path::Path};
+use std::{collections::HashSet, env::args, fs, path::Path};
 
 use crate::ast::Program;
 
@@ -19,9 +19,16 @@ fn main() {
     let original_file = Path::new(original_path.file_name().unwrap());
 
     let mut program = new_program(base_dir, original_file, None);
-    for m in &program.mods {
+    let mut mods = program.mods.clone();
+    let mut resolved = HashSet::new();
+    while let Some(m) = mods.pop() {
+        if !resolved.insert(m.clone()) {
+            continue;
+        }
+
         let mod_program = new_program(base_dir, Path::new(&format!("{m}.rs")), Some(m.clone()));
         program.functions.extend(mod_program.functions);
+        mods.extend(mod_program.mods.clone());
     }
 
     let hir_program = semantic::analyze(&program);
