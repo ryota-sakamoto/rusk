@@ -73,9 +73,9 @@ pub enum Node {
     Bool(bool),
     Ret(Box<Node>),
     Let(String, Option<String>, Box<Node>, bool),
-    RLet(String),
+    Path(Vec<String>),
+    PathCall(Vec<String>, Vec<Node>),
     Assign(Box<Node>, Box<Node>),
-    Call(String, Vec<Node>),
     MethodCall(Box<Node>, String, Vec<Node>),
     Comparison(ComparisonType, Box<Node>, Box<Node>),
     And(Box<Node>, Box<Node>),
@@ -87,7 +87,6 @@ pub enum Node {
     Block(Vec<Node>),
     Not(Box<Node>),
     Struct(String, BTreeMap<String, Node>),
-    Enum(String, String),
     Match(Box<Node>, Vec<(Node, Node)>),
     FieldAccess(Box<Node>, String),
     Array(Vec<Node>),
@@ -157,6 +156,15 @@ impl<'a> Parser<'a> {
         }
 
         result
+    }
+
+    fn is_identifier(&self) -> bool {
+        match self.current() {
+            Some(Token {
+                kind: TokenKind::Identifier(_),
+            }) => true,
+            _ => false,
+        }
     }
 
     pub fn program(&mut self) -> Program {
@@ -497,12 +505,15 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> Node {
-        if let Some(identifier) = self.identifier() {
-            let mod_function = if self.consume(TokenKind::ColonColon) {
-                Some(self.identifier().expect("should be identifier"))
-            } else {
-                None
-            };
+        if self.is_identifier() {
+            let mut identifiers = Vec::new();
+            let identifier = self.identifier().expect("should be identifier");
+            identifiers.push(identifier.clone());
+
+            while self.consume(TokenKind::ColonColon) {
+                let next_identifier = self.identifier().expect("should be identifier");
+                identifiers.push(next_identifier);
+            }
 
             let field = if self.consume(TokenKind::Dot) {
                 let field = self.identifier().expect("should be identifier");
@@ -520,16 +531,10 @@ impl<'a> Parser<'a> {
                 }
 
                 if let Some(field) = field {
-                    return Node::MethodCall(Box::new(Node::RLet(identifier)), field, args);
+                    return Node::MethodCall(Box::new(Node::Path(identifiers)), field, args);
                 }
 
-                return Node::Call(
-                    format!(
-                        "{identifier}{}",
-                        mod_function.map_or(String::new(), |v| format!("::{v}"))
-                    ),
-                    args,
-                );
+                return Node::PathCall(identifiers, args);
             }
 
             if self.consume(TokenKind::LBracket) {
@@ -541,25 +546,25 @@ impl<'a> Parser<'a> {
                 if self.consume(TokenKind::Assign) {
                     return Node::Assign(
                         Box::new(Node::ArrayAccess(
-                            Box::new(Node::RLet(identifier)),
+                            Box::new(Node::Path(identifiers)),
                             Box::new(index),
                         )),
                         Box::new(self.expr()),
                     );
                 }
 
-                return Node::ArrayAccess(Box::new(Node::RLet(identifier)), Box::new(index));
+                return Node::ArrayAccess(Box::new(Node::Path(identifiers)), Box::new(index));
             }
 
             if let Some(field) = field {
                 if self.consume(TokenKind::Assign) {
                     return Node::Assign(
-                        Box::new(Node::FieldAccess(Box::new(Node::RLet(identifier)), field)),
+                        Box::new(Node::FieldAccess(Box::new(Node::Path(identifiers)), field)),
                         Box::new(self.expr()),
                     );
                 }
 
-                return Node::FieldAccess(Box::new(Node::RLet(identifier)), field);
+                return Node::FieldAccess(Box::new(Node::Path(identifiers)), field);
             }
 
             if self.allow_struct && self.consume(TokenKind::LBrace) {
@@ -580,14 +585,10 @@ impl<'a> Parser<'a> {
             }
 
             if self.consume(TokenKind::Assign) {
-                return Node::Assign(Box::new(Node::RLet(identifier)), Box::new(self.expr()));
+                return Node::Assign(Box::new(Node::Path(identifiers)), Box::new(self.expr()));
             }
 
-            if let Some(m) = mod_function {
-                return Node::Enum(identifier, m);
-            }
-
-            return Node::RLet(identifier);
+            return Node::Path(identifiers);
         }
 
         if self.consume(TokenKind::LParen) {
@@ -609,9 +610,9 @@ impl<'a> Parser<'a> {
         if self.consume(TokenKind::SelfValue) {
             if self.consume(TokenKind::Dot) {
                 let field = self.identifier().expect("should be identifier");
-                return Node::FieldAccess(Box::new(Node::RLet("self".to_owned())), field);
+                return Node::FieldAccess(Box::new(Node::Path(vec!["self".to_owned()])), field);
             }
-            return Node::RLet("self".to_owned());
+            return Node::Path(vec!["self".to_owned()]);
         }
 
         if self.consume(TokenKind::LBracket) {
@@ -686,7 +687,7 @@ mod tests {
                 ],
                 Node::Comparison(
                     ComparisonType::Eq,
-                    Box::new(Node::RLet("a".to_owned())),
+                    Box::new(Node::Path(vec!["a".to_owned()])),
                     Box::new(Node::Num(1)),
                 ),
             ),
@@ -728,7 +729,7 @@ mod tests {
                         kind: TokenKind::RParen,
                     },
                 ],
-                Node::Call("f".to_owned(), vec![Node::Num(5), Node::Num(3)]),
+                Node::PathCall(vec!["f".to_owned()], vec![Node::Num(5), Node::Num(3)]),
             ),
         ];
 

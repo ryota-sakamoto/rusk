@@ -216,12 +216,6 @@ impl<'a> FunctionAnalyzer<'a> {
                 );
                 HirNode::Let(name.clone(), actual_ty, Box::new(rn), *is_mut)
             }
-            Node::RLet(name) => {
-                if !self.let_map.contains_key(&name.as_str()) {
-                    panic!("{:?} is not defined", name);
-                }
-                HirNode::RLet(name.clone(), self.let_map[name.as_str()].ty.clone())
-            }
             Node::FieldAccess(node, field) => {
                 let rn = self.analyze_node(node);
                 let ty = self.type_of(&rn);
@@ -234,7 +228,32 @@ impl<'a> FunctionAnalyzer<'a> {
 
                 HirNode::FieldAccess(Box::new(rn), struct_field.index, struct_field.ty.clone())
             }
-            Node::Call(name, args) => {
+            Node::Path(items) => {
+                if items.len() == 1 {
+                    let name = &items[0];
+                    if !self.let_map.contains_key(&name.as_str()) {
+                        panic!("{:?} is not defined", name);
+                    }
+                    HirNode::RLet(name.clone(), self.let_map[name.as_str()].ty.clone())
+                } else if items.len() == 2 {
+                    let name = &items[0];
+                    let variant = &items[1];
+
+                    let m = self
+                        .enum_map
+                        .get(name)
+                        .unwrap_or_else(|| panic!("cannot find type {:?}", name));
+                    if !m.contains_key(variant) {
+                        panic!("cannot find variant {:?} in {:?}", variant, name);
+                    }
+
+                    HirNode::Enum(name.clone(), variant.clone())
+                } else {
+                    unimplemented!()
+                }
+            }
+            Node::PathCall(identifiers, args) => {
+                let name = identifiers.join("::");
                 // TODO: check libc functions
                 if name == "printf" {
                     return HirNode::Call(
@@ -366,17 +385,6 @@ impl<'a> FunctionAnalyzer<'a> {
 
                 HirNode::Struct(name.clone(), args)
             }
-            Node::Enum(name, variant) => {
-                let m = self
-                    .enum_map
-                    .get(name)
-                    .unwrap_or_else(|| panic!("cannot find type {:?}", name));
-                if !m.contains_key(variant) {
-                    panic!("cannot find variant {:?} in {:?}", variant, name);
-                }
-
-                HirNode::Enum(name.clone(), variant.clone())
-            }
             Node::Match(l, r) => HirNode::Match(
                 Box::new(self.analyze_node(l)),
                 r.iter()
@@ -507,7 +515,7 @@ mod tests {
                     "a".to_owned(),
                     None,
                     Box::new(Node::Add(
-                        Box::new(Node::RLet("b".to_owned())),
+                        Box::new(Node::Path(vec!["b".to_owned()])),
                         Box::new(Node::Num(1)),
                     )),
                     false,
@@ -531,7 +539,10 @@ mod tests {
                 args: Vec::new(),
                 body: Node::Block(vec![
                     Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), false),
-                    Node::Assign(Box::new(Node::RLet("a".to_owned())), Box::new(Node::Num(3))),
+                    Node::Assign(
+                        Box::new(Node::Path(vec!["a".to_owned()])),
+                        Box::new(Node::Num(3)),
+                    ),
                 ]),
                 ty: "void".to_owned(),
                 mod_name: None,
@@ -553,7 +564,7 @@ mod tests {
                 body: Node::Block(vec![
                     Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), true),
                     Node::Assign(
-                        Box::new(Node::RLet("a".to_owned())),
+                        Box::new(Node::Path(vec!["a".to_owned()])),
                         Box::new(Node::Bool(false)),
                     ),
                 ]),
@@ -577,7 +588,7 @@ mod tests {
                 body: Node::Block(vec![Node::If(
                     Box::new(Node::Comparison(
                         crate::ast::ComparisonType::Eq,
-                        Box::new(Node::RLet("c".to_owned())),
+                        Box::new(Node::Path(vec!["c".to_owned()])),
                         Box::new(Node::Num(10)),
                     )),
                     Box::new(Node::Block(vec![])),
@@ -600,7 +611,7 @@ mod tests {
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
-                body: Node::Block(vec![Node::Ret(Box::new(Node::RLet("d".to_owned())))]),
+                body: Node::Block(vec![Node::Ret(Box::new(Node::Path(vec!["d".to_owned()])))]),
                 ty: "void".to_owned(),
                 mod_name: None,
             }],
@@ -620,7 +631,7 @@ mod tests {
                 args: Vec::new(),
                 body: Node::Block(vec![Node::Struct(
                     "Test".to_owned(),
-                    BTreeMap::from([("a".to_owned(), Node::RLet("e".to_owned()))]),
+                    BTreeMap::from([("a".to_owned(), Node::Path(vec!["e".to_owned()]))]),
                 )]),
                 ty: "void".to_owned(),
                 mod_name: None,
@@ -639,7 +650,7 @@ mod tests {
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
-                body: Node::Block(vec![Node::Enum("Test".to_owned(), "A".to_owned())]),
+                body: Node::Block(vec![Node::Path(vec!["Test".to_owned(), "A".to_owned()])]),
                 ty: "void".to_owned(),
                 mod_name: None,
             }],
@@ -662,7 +673,7 @@ mod tests {
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
-                body: Node::Block(vec![Node::Enum("Test".to_owned(), "B".to_owned())]),
+                body: Node::Block(vec![Node::Path(vec!["Test".to_owned(), "B".to_owned()])]),
                 ty: "void".to_owned(),
                 mod_name: None,
             }],
