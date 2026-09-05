@@ -67,7 +67,7 @@ impl<'a> Analyzer<'a> {
         for i in &self.program.impls {
             for f in &i.functions {
                 let mut function_analyzer =
-                    FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map);
+                    FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map, &enum_map);
 
                 functions.push(HirFunction {
                     name: format!("{}::{}", i.name, f.name),
@@ -81,7 +81,7 @@ impl<'a> Analyzer<'a> {
 
         for f in &self.program.functions {
             let mut function_analyzer =
-                FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map);
+                FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map, &enum_map);
 
             functions.push(HirFunction {
                 name: f.name.clone(),
@@ -138,6 +138,7 @@ struct FunctionAnalyzer<'a> {
     let_map: HashMap<&'a str, LetMetadata>,
     strings: &'a mut Vec<String>,
     struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
+    enum_map: &'a HashMap<String, HashMap<String, usize>>,
 }
 
 struct LetMetadata {
@@ -151,6 +152,7 @@ impl<'a> FunctionAnalyzer<'a> {
         functions: &'a HashMap<String, FunctionMetadata>,
         strings: &'a mut Vec<String>,
         struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
+        enum_map: &'a HashMap<String, HashMap<String, usize>>,
     ) -> Self {
         let mut let_map = HashMap::new();
         for arg in &function.args {
@@ -168,6 +170,7 @@ impl<'a> FunctionAnalyzer<'a> {
             let_map,
             strings,
             struct_map,
+            enum_map,
         }
     }
 
@@ -363,7 +366,17 @@ impl<'a> FunctionAnalyzer<'a> {
 
                 HirNode::Struct(name.clone(), args)
             }
-            Node::Enum(name, variant) => HirNode::Enum(name.clone(), variant.clone()),
+            Node::Enum(name, variant) => {
+                let m = self
+                    .enum_map
+                    .get(name)
+                    .unwrap_or_else(|| panic!("cannot find type {:?}", name));
+                if !m.contains_key(variant) {
+                    panic!("cannot find variant {:?} in {:?}", variant, name);
+                }
+
+                HirNode::Enum(name.clone(), variant.clone())
+            }
             Node::Match(l, r) => HirNode::Match(
                 Box::new(self.analyze_node(l)),
                 r.iter()
@@ -429,7 +442,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use crate::{
-        ast::{Function, Node, Program},
+        ast::{EnumType, EnumVariant, Function, Node, Program},
         semantic::analyze,
     };
 
@@ -609,6 +622,47 @@ mod tests {
                     "Test".to_owned(),
                     BTreeMap::from([("a".to_owned(), Node::RLet("e".to_owned()))]),
                 )]),
+                ty: "void".to_owned(),
+                mod_name: None,
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"cannot find type "Test""#)]
+    fn check_enum_existence() {
+        analyze(&Program {
+            mods: vec![],
+            structs: vec![],
+            enums: vec![],
+            impls: vec![],
+            functions: vec![Function {
+                name: "main".to_owned(),
+                args: Vec::new(),
+                body: Node::Block(vec![Node::Enum("Test".to_owned(), "A".to_owned())]),
+                ty: "void".to_owned(),
+                mod_name: None,
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"cannot find variant "B" in "Test""#)]
+    fn check_enum_field_existence() {
+        analyze(&Program {
+            mods: vec![],
+            structs: vec![],
+            enums: vec![EnumType {
+                name: "Test".to_owned(),
+                variants: vec![EnumVariant {
+                    name: "A".to_owned(),
+                }],
+            }],
+            impls: vec![],
+            functions: vec![Function {
+                name: "main".to_owned(),
+                args: Vec::new(),
+                body: Node::Block(vec![Node::Enum("Test".to_owned(), "B".to_owned())]),
                 ty: "void".to_owned(),
                 mod_name: None,
             }],
