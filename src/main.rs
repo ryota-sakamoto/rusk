@@ -1,10 +1,9 @@
-use std::{collections::HashSet, env::args, fs, path::Path};
-
-use crate::ast::Program;
+use std::{env::args, path::Path};
 
 mod ast;
 mod code;
 mod hir;
+mod loader;
 mod semantic;
 mod token;
 
@@ -15,31 +14,11 @@ fn main() {
     }
 
     let original_path = Path::new(&args[1]);
-    let base_dir = original_path.parent().unwrap();
     let original_file = Path::new(original_path.file_name().unwrap());
+    let base_dir = original_path.parent().unwrap().to_path_buf();
 
-    let mut program = new_program(base_dir, original_file, None);
-    let mut mods = program.mods.clone();
-    let mut resolved = HashSet::new();
-    while let Some(m) = mods.pop() {
-        if !resolved.insert(m.clone()) {
-            continue;
-        }
-
-        let mod_program = new_program(base_dir, Path::new(&format!("{m}.rs")), Some(m.clone()));
-        program.functions.extend(mod_program.functions);
-        mods.extend(mod_program.mods.clone());
-    }
-
+    let mut l = loader::Loader::new(base_dir);
+    let program = l.load(original_file, None);
     let hir_program = semantic::analyze(&program);
     code::generate(&hir_program);
-}
-
-fn new_program(base: &Path, p: &Path, mod_name: Option<String>) -> Program {
-    let file_name = base.join(p);
-    let p = fs::read_to_string(file_name).unwrap();
-
-    let tokens = token::tokenize(&p);
-    let mut parser = ast::Parser::new(&tokens, mod_name);
-    parser.program()
 }
