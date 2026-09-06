@@ -37,14 +37,6 @@ impl<'a> Analyzer<'a> {
         let mut struct_map = BTreeMap::new();
         let mut strings = Vec::new();
         let mut enum_map = HashMap::new();
-        for e in &self.program.enums {
-            let mut variants_map = HashMap::new();
-            for (index, variant) in e.variants.iter().enumerate() {
-                variants_map.insert(variant.name.clone(), index);
-            }
-
-            enum_map.insert(e.name.clone(), variants_map);
-        }
 
         let mut functions = Vec::new();
         for n in &self.program.nodes {
@@ -81,6 +73,14 @@ impl<'a> Analyzer<'a> {
                             mod_name: f.mod_name.clone(),
                         });
                     }
+                }
+                Node::EnumDef(e) => {
+                    let mut variants_map = HashMap::new();
+                    for (index, variant) in e.variants.iter().enumerate() {
+                        variants_map.insert(variant.name.clone(), index);
+                    }
+
+                    enum_map.insert(e.name.clone(), variants_map);
                 }
                 _ => {}
             }
@@ -195,6 +195,9 @@ impl<'a> FunctionAnalyzer<'a> {
                 unimplemented!()
             }
             Node::ImplDef(_) => {
+                unimplemented!()
+            }
+            Node::EnumDef(_) => {
                 unimplemented!()
             }
             Node::Add(l, r) => {
@@ -493,7 +496,6 @@ mod tests {
     fn check_main() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: Vec::new(),
         });
     }
@@ -503,7 +505,6 @@ mod tests {
     fn check_duplicated_function() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: vec![
                 Function {
                     name: "f".to_owned(),
@@ -535,7 +536,6 @@ mod tests {
     fn check_let_existence() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -559,7 +559,6 @@ mod tests {
     fn check_mut() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -581,7 +580,6 @@ mod tests {
     fn check_assign_type() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -603,7 +601,6 @@ mod tests {
     fn check_let_existence_if() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -627,7 +624,6 @@ mod tests {
     fn check_let_existence_return() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -643,7 +639,6 @@ mod tests {
     fn check_let_existence_struct() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -662,7 +657,6 @@ mod tests {
     fn check_enum_existence() {
         analyze(&Program {
             nodes: vec![],
-            enums: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -677,14 +671,13 @@ mod tests {
     #[should_panic(expected = r#"cannot find variant "B" in "Test""#)]
     fn check_enum_field_existence() {
         analyze(&Program {
-            nodes: vec![],
-            enums: vec![EnumType {
+            nodes: vec![Node::EnumDef(EnumType {
                 name: "Test".to_owned(),
                 variants: vec![EnumVariant {
                     name: "A".to_owned(),
                     types: Vec::new(),
                 }],
-            }],
+            })],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),

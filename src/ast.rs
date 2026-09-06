@@ -7,7 +7,6 @@ use crate::token::{Token, TokenKind};
 pub struct Program {
     pub nodes: Vec<Node>,
     pub functions: Vec<Function>,
-    pub enums: Vec<EnumType>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -66,6 +65,7 @@ pub enum Node {
     Mod(String),
     StructDef(StructType),
     ImplDef(ImplType),
+    EnumDef(EnumType),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
     Mul(Box<Node>, Box<Node>),
@@ -172,7 +172,6 @@ impl<'a> Parser<'a> {
     pub fn program(&mut self) -> Program {
         let mut nodes = Vec::new();
         let mut functions = Vec::new();
-        let mut enums = Vec::new();
 
         loop {
             if self.consume(TokenKind::Mod) {
@@ -188,7 +187,7 @@ impl<'a> Parser<'a> {
             } else if self.peek(TokenKind::Struct) {
                 nodes.push(self.struct_type());
             } else if self.peek(TokenKind::Enum) {
-                enums.push(self.enum_type());
+                nodes.push(self.enum_type());
             } else if self.peek(TokenKind::Impl) {
                 nodes.push(self.impl_type());
             } else {
@@ -196,11 +195,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Program {
-            nodes,
-            functions,
-            enums,
-        }
+        Program { nodes, functions }
     }
 
     fn function(&mut self) -> Function {
@@ -282,7 +277,7 @@ impl<'a> Parser<'a> {
         Node::StructDef(StructType { name, fields })
     }
 
-    fn enum_type(&mut self) -> EnumType {
+    fn enum_type(&mut self) -> Node {
         if !self.consume(TokenKind::Enum) {
             panic!("should be TokenKind::Enum");
         }
@@ -306,7 +301,7 @@ impl<'a> Parser<'a> {
             variants.push(EnumVariant { name, types });
         }
 
-        EnumType { name, variants }
+        Node::EnumDef(EnumType { name, variants })
     }
 
     fn impl_type(&mut self) -> Node {
