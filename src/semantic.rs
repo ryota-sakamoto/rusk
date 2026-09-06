@@ -35,6 +35,18 @@ impl<'a> Analyzer<'a> {
         self.analyze_functions();
 
         let mut struct_map = BTreeMap::new();
+        let mut strings = Vec::new();
+        let mut enum_map = HashMap::new();
+        for e in &self.program.enums {
+            let mut variants_map = HashMap::new();
+            for (index, variant) in e.variants.iter().enumerate() {
+                variants_map.insert(variant.name.clone(), index);
+            }
+
+            enum_map.insert(e.name.clone(), variants_map);
+        }
+
+        let mut functions = Vec::new();
         for n in &self.program.nodes {
             match n {
                 Node::StructDef(s) => {
@@ -51,34 +63,26 @@ impl<'a> Analyzer<'a> {
 
                     struct_map.insert(s.name.clone(), fields_map);
                 }
+                Node::ImplDef(i) => {
+                    for f in &i.functions {
+                        let mut function_analyzer = FunctionAnalyzer::new(
+                            f,
+                            &self.functions,
+                            &mut strings,
+                            &struct_map,
+                            &enum_map,
+                        );
+
+                        functions.push(HirFunction {
+                            name: format!("{}::{}", i.name, f.name),
+                            args: f.args.clone(),
+                            body: function_analyzer.analyze_node(&f.body),
+                            ty: f.ty.clone(),
+                            mod_name: f.mod_name.clone(),
+                        });
+                    }
+                }
                 _ => {}
-            }
-        }
-
-        let mut enum_map = HashMap::new();
-        for e in &self.program.enums {
-            let mut variants_map = HashMap::new();
-            for (index, variant) in e.variants.iter().enumerate() {
-                variants_map.insert(variant.name.clone(), index);
-            }
-
-            enum_map.insert(e.name.clone(), variants_map);
-        }
-
-        let mut strings = Vec::new();
-        let mut functions = Vec::new();
-        for i in &self.program.impls {
-            for f in &i.functions {
-                let mut function_analyzer =
-                    FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map, &enum_map);
-
-                functions.push(HirFunction {
-                    name: format!("{}::{}", i.name, f.name),
-                    args: f.args.clone(),
-                    body: function_analyzer.analyze_node(&f.body),
-                    ty: f.ty.clone(),
-                    mod_name: f.mod_name.clone(),
-                });
             }
         }
 
@@ -104,15 +108,20 @@ impl<'a> Analyzer<'a> {
     }
 
     fn analyze_functions(&mut self) {
-        for i in &self.program.impls {
-            for f in &i.functions {
-                self.functions.insert(
-                    format!("{}::{}", i.name, f.name),
-                    FunctionMetadata {
-                        args: f.args.clone(),
-                        ty: f.ty.parse().unwrap(),
-                    },
-                );
+        for node in &self.program.nodes {
+            match node {
+                Node::ImplDef(i) => {
+                    for f in &i.functions {
+                        self.functions.insert(
+                            format!("{}::{}", i.name, f.name),
+                            FunctionMetadata {
+                                args: f.args.clone(),
+                                ty: f.ty.parse().unwrap(),
+                            },
+                        );
+                    }
+                }
+                _ => {}
             }
         }
 
@@ -183,6 +192,9 @@ impl<'a> FunctionAnalyzer<'a> {
                 unimplemented!()
             }
             Node::StructDef(_) => {
+                unimplemented!()
+            }
+            Node::ImplDef(_) => {
                 unimplemented!()
             }
             Node::Add(l, r) => {
@@ -482,7 +494,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: Vec::new(),
         });
     }
@@ -493,7 +504,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: vec![
                 Function {
                     name: "f".to_owned(),
@@ -526,7 +536,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -551,7 +560,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -574,7 +582,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -597,7 +604,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -622,7 +628,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -639,7 +644,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -659,7 +663,6 @@ mod tests {
         analyze(&Program {
             nodes: vec![],
             enums: vec![],
-            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
@@ -682,7 +685,6 @@ mod tests {
                     types: Vec::new(),
                 }],
             }],
-            impls: vec![],
             functions: vec![Function {
                 name: "main".to_owned(),
                 args: Vec::new(),

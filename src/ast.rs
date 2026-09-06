@@ -8,7 +8,6 @@ pub struct Program {
     pub nodes: Vec<Node>,
     pub functions: Vec<Function>,
     pub enums: Vec<EnumType>,
-    pub impls: Vec<ImplType>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -66,6 +65,7 @@ pub struct Arg {
 pub enum Node {
     Mod(String),
     StructDef(StructType),
+    ImplDef(ImplType),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
     Mul(Box<Node>, Box<Node>),
@@ -173,7 +173,6 @@ impl<'a> Parser<'a> {
         let mut nodes = Vec::new();
         let mut functions = Vec::new();
         let mut enums = Vec::new();
-        let mut impls = Vec::new();
 
         loop {
             if self.consume(TokenKind::Mod) {
@@ -191,7 +190,7 @@ impl<'a> Parser<'a> {
             } else if self.peek(TokenKind::Enum) {
                 enums.push(self.enum_type());
             } else if self.peek(TokenKind::Impl) {
-                impls.push(self.impl_type());
+                nodes.push(self.impl_type());
             } else {
                 break;
             }
@@ -201,7 +200,6 @@ impl<'a> Parser<'a> {
             nodes,
             functions,
             enums,
-            impls,
         }
     }
 
@@ -311,7 +309,7 @@ impl<'a> Parser<'a> {
         EnumType { name, variants }
     }
 
-    fn impl_type(&mut self) -> ImplType {
+    fn impl_type(&mut self) -> Node {
         if !self.consume(TokenKind::Impl) {
             panic!("should be TokenKind::Impl");
         }
@@ -326,7 +324,7 @@ impl<'a> Parser<'a> {
             functions.push(self.function());
         }
 
-        ImplType { name, functions }
+        Node::ImplDef(ImplType { name, functions })
     }
 
     fn stmt(&mut self) -> Node {
