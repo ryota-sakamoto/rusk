@@ -52,8 +52,6 @@ impl<'a> Analyzer<'a> {
 
         let mut enum_map = HashMap::new();
         for e in &self.program.enums {
-            println!("%{} = type {{i32}}", e.name);
-
             let mut variants_map = HashMap::new();
             for (index, variant) in e.variants.iter().enumerate() {
                 variants_map.insert(variant.name.clone(), index);
@@ -247,7 +245,7 @@ impl<'a> FunctionAnalyzer<'a> {
                         panic!("cannot find variant {:?} in {:?}", variant, name);
                     }
 
-                    HirNode::Enum(name.clone(), variant.clone())
+                    HirNode::Enum(name.clone(), variant.clone(), Vec::new())
                 } else {
                     unimplemented!()
                 }
@@ -261,6 +259,19 @@ impl<'a> FunctionAnalyzer<'a> {
                         args.iter().map(|v| self.analyze_node(v)).collect(),
                         Type::Int,
                     );
+                }
+
+                if self.enum_map.contains_key(&identifiers[0]) {
+                    if !self.enum_map[&identifiers[0]].contains_key(&identifiers[1]) {
+                        unimplemented!()
+                    }
+
+                    let mut fields = Vec::new();
+                    for a in args {
+                        fields.push(self.analyze_node(a));
+                    }
+
+                    return HirNode::Enum(identifiers[0].clone(), identifiers[1].clone(), fields);
                 }
 
                 let f = self
@@ -436,7 +447,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::FieldAccess(_, _, ty) => ty.clone(),
             HirNode::Call(_, _, ty) => ty.clone(),
             HirNode::Struct(name, _) => Type::Struct(name.clone()),
-            HirNode::Enum(_, _) => Type::Int,
+            HirNode::Enum(name, variant, _) => Type::Enum(name.clone(), variant.clone()),
             HirNode::Comparison(_, _, _) => Type::Bool,
             HirNode::Array(data, ty) => Type::Array(Box::new(ty.clone()), data.len()),
             HirNode::ArrayAccess(_, _, ty) => ty.clone(),
@@ -667,6 +678,7 @@ mod tests {
                 name: "Test".to_owned(),
                 variants: vec![EnumVariant {
                     name: "A".to_owned(),
+                    types: Vec::new(),
                 }],
             }],
             impls: vec![],

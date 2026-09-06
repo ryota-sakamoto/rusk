@@ -39,6 +39,10 @@ impl<'a> Generator<'a> {
             );
         }
 
+        for k in self.program.enum_map.keys() {
+            println!("%{} = type {{i32, [8 x i8]}}", k);
+        }
+
         println!("declare i32 @printf(ptr, ...)");
 
         for f in self.program.functions.iter() {
@@ -481,11 +485,32 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Struct(name.clone()),
                 }
             }
-            Node::Enum(name, variant) => {
+            Node::Enum(name, variant, fields) => {
+                let reg = self.new_reg();
+                println!("  %r{reg} = alloca %{name}");
+
                 let variant_index = self.enum_map[name.as_str()][variant.as_str()];
+                let field_reg = self.new_reg();
+                println!("  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 0");
+                println!("  store i32 {}, ptr %r{field_reg}", variant_index);
+
+                for (index, node) in fields.iter().enumerate() {
+                    let r = self.generate_node(node);
+                    let field_reg = self.new_reg();
+
+                    println!(
+                        "  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 {}",
+                        index + 1,
+                    );
+                    println!("  store {} {}, ptr %r{field_reg}", r.ty, r.name);
+                }
+
+                let val_reg = self.new_reg();
+                println!("  %r{val_reg} = load %{name}, ptr %r{reg}");
+
                 Value {
-                    name: variant_index.to_string(),
-                    ty: Type::Int,
+                    name: format!("%r{val_reg}"),
+                    ty: Type::Enum(name.clone(), variant.clone()),
                 }
             }
             Node::Match(l, r) => {
@@ -497,18 +522,20 @@ impl<'a> GenerateFunction<'a> {
                 let mut switch_labels = Vec::new();
                 for (index, (cond, _)) in r.iter().enumerate() {
                     let cond_value = self.generate_node(cond);
+                    let value = self.extract_label_for_match(cond_value);
 
                     let switch_label = format!("switch_{label}_{index}");
                     switch_labels.push(format!(
                         "{} {}, label %{switch_label}",
-                        cond_value.ty, cond_value.name
+                        value.ty, value.name
                     ));
                 }
 
+                let value = self.extract_value_for_match(ln);
                 println!(
                     "  switch {} {}, label %{switch_label} [{}]",
-                    ln.ty,
-                    ln.name,
+                    value.ty,
+                    value.name,
                     switch_labels.join(" ")
                 );
 
@@ -610,6 +637,31 @@ impl<'a> GenerateFunction<'a> {
                 }
             }
             _ => unimplemented!("{:?} cannot be assigned", node),
+        }
+    }
+
+    fn extract_label_for_match(&mut self, value: Value) -> Value {
+        match value.ty {
+            Type::Enum(name, variant) => Value {
+                name: format!("{}", self.enum_map[&name][&variant]),
+                ty: Type::Int,
+            },
+            _ => unimplemented!("{:?} cannot be label", value),
+        }
+    }
+
+    fn extract_value_for_match(&mut self, value: Value) -> Value {
+        match value.ty {
+            Type::Enum(_, _) => {
+                let reg = self.new_reg();
+                println!("  %r{reg} = extractvalue {} {}, 0", value.ty, value.name);
+
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Int,
+                }
+            }
+            _ => unimplemented!("{:?} cannot be extracted", value),
         }
     }
 }

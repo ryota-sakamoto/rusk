@@ -60,7 +60,7 @@ pub enum Node {
     Block(Vec<Node>),
     Not(Box<Node>),
     Struct(String, Vec<(usize, Node)>),
-    Enum(String, String),
+    Enum(String, String, Vec<Node>),
     Match(Box<Node>, Vec<(Node, Node)>),
     Array(Vec<Node>, Type),
     ArrayAccess(Box<Node>, Box<Node>, Type),
@@ -73,6 +73,7 @@ pub enum Type {
     Bool,
     Ptr(Box<Type>),
     Struct(String),
+    Enum(String, String),
     Array(Box<Type>, usize),
     Void,
 }
@@ -112,6 +113,7 @@ impl Display for Type {
                 Type::Void => "void".to_owned(),
                 Type::Ptr(_) => "ptr".to_owned(),
                 Type::Struct(name) => format!("%{name}"),
+                Type::Enum(name, _) => format!("%{name}"),
                 Type::Array(ty, len) => format!("[{} x {}]", len, ty),
             }
         )
