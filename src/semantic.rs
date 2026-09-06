@@ -86,17 +86,19 @@ impl<'a> Analyzer<'a> {
             }
         }
 
-        for f in &self.program.functions {
-            let mut function_analyzer =
-                FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map, &enum_map);
+        for node in &self.program.nodes {
+            if let Node::FunctionDef(f) = node {
+                let mut function_analyzer =
+                    FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map, &enum_map);
 
-            functions.push(HirFunction {
-                name: f.name.clone(),
-                args: f.args.clone(),
-                body: function_analyzer.analyze_node(&f.body),
-                ty: f.ty.clone(),
-                mod_name: f.mod_name.clone(),
-            });
+                functions.push(HirFunction {
+                    name: f.name.clone(),
+                    args: f.args.clone(),
+                    body: function_analyzer.analyze_node(&f.body),
+                    ty: f.ty.clone(),
+                    mod_name: f.mod_name.clone(),
+                });
+            }
         }
 
         HirProgram {
@@ -125,18 +127,20 @@ impl<'a> Analyzer<'a> {
             }
         }
 
-        for f in &self.program.functions {
-            if self.functions.contains_key(f.name.as_str()) {
-                panic!("{:?} is duplicated", f.name);
-            }
+        for node in &self.program.nodes {
+            if let Node::FunctionDef(f) = node {
+                if self.functions.contains_key(f.name.as_str()) {
+                    panic!("{:?} is duplicated", f.name);
+                }
 
-            self.functions.insert(
-                f.full_name(),
-                FunctionMetadata {
-                    args: f.args.clone(),
-                    ty: f.ty.parse().unwrap(),
-                },
-            );
+                self.functions.insert(
+                    f.full_name(),
+                    FunctionMetadata {
+                        args: f.args.clone(),
+                        ty: f.ty.parse().unwrap(),
+                    },
+                );
+            }
         }
 
         if !self.functions.contains_key("main") {
@@ -188,18 +192,11 @@ impl<'a> FunctionAnalyzer<'a> {
 
     fn analyze_node(&mut self, node: &'a Node) -> HirNode {
         match node {
-            Node::Mod(_) => {
-                unimplemented!()
-            }
-            Node::StructDef(_) => {
-                unimplemented!()
-            }
-            Node::ImplDef(_) => {
-                unimplemented!()
-            }
-            Node::EnumDef(_) => {
-                unimplemented!()
-            }
+            Node::Mod(_) => unimplemented!(),
+            Node::StructDef(_) => unimplemented!(),
+            Node::ImplDef(_) => unimplemented!(),
+            Node::EnumDef(_) => unimplemented!(),
+            Node::FunctionDef(_) => unimplemented!(),
             Node::Add(l, r) => {
                 let ln = self.analyze_node(l);
                 let rn = self.analyze_node(r);
@@ -494,39 +491,35 @@ mod tests {
     #[test]
     #[should_panic(expected = r#""main" is not defined"#)]
     fn check_main() {
-        analyze(&Program {
-            nodes: vec![],
-            functions: Vec::new(),
-        });
+        analyze(&Program { nodes: vec![] });
     }
 
     #[test]
     #[should_panic(expected = r#""f" is duplicated"#)]
     fn check_duplicated_function() {
         analyze(&Program {
-            nodes: vec![],
-            functions: vec![
-                Function {
+            nodes: vec![
+                Node::FunctionDef(Box::new(Function {
                     name: "f".to_owned(),
                     args: Vec::new(),
                     body: Node::Block(vec![]),
                     ty: "void".to_owned(),
                     mod_name: None,
-                },
-                Function {
+                })),
+                Node::FunctionDef(Box::new(Function {
                     name: "f".to_owned(),
                     args: Vec::new(),
                     body: Node::Block(vec![]),
                     ty: "void".to_owned(),
                     mod_name: None,
-                },
-                Function {
+                })),
+                Node::FunctionDef(Box::new(Function {
                     name: "main".to_owned(),
                     args: Vec::new(),
                     body: Node::Block(vec![]),
                     ty: "void".to_owned(),
                     mod_name: None,
-                },
+                })),
             ],
         });
     }
@@ -535,8 +528,7 @@ mod tests {
     #[should_panic(expected = r#""b" is not defined"#)]
     fn check_let_existence() {
         analyze(&Program {
-            nodes: vec![],
-            functions: vec![Function {
+            nodes: vec![Node::FunctionDef(Box::new(Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
                 body: Node::Block(vec![Node::Let(
@@ -550,7 +542,7 @@ mod tests {
                 )]),
                 ty: "void".to_owned(),
                 mod_name: None,
-            }],
+            }))],
         });
     }
 
@@ -558,8 +550,7 @@ mod tests {
     #[should_panic(expected = r#""a" should be mut"#)]
     fn check_mut() {
         analyze(&Program {
-            nodes: vec![],
-            functions: vec![Function {
+            nodes: vec![Node::FunctionDef(Box::new(Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
                 body: Node::Block(vec![
@@ -571,7 +562,7 @@ mod tests {
                 ]),
                 ty: "void".to_owned(),
                 mod_name: None,
-            }],
+            }))],
         });
     }
 
@@ -579,8 +570,7 @@ mod tests {
     #[should_panic(expected = r#"expected i32, found i1"#)]
     fn check_assign_type() {
         analyze(&Program {
-            nodes: vec![],
-            functions: vec![Function {
+            nodes: vec![Node::FunctionDef(Box::new(Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
                 body: Node::Block(vec![
@@ -592,7 +582,7 @@ mod tests {
                 ]),
                 ty: "void".to_owned(),
                 mod_name: None,
-            }],
+            }))],
         });
     }
 
@@ -600,8 +590,7 @@ mod tests {
     #[should_panic(expected = r#""c" is not defined"#)]
     fn check_let_existence_if() {
         analyze(&Program {
-            nodes: vec![],
-            functions: vec![Function {
+            nodes: vec![Node::FunctionDef(Box::new(Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
                 body: Node::Block(vec![Node::If(
@@ -615,7 +604,7 @@ mod tests {
                 )]),
                 ty: "void".to_owned(),
                 mod_name: None,
-            }],
+            }))],
         });
     }
 
@@ -623,14 +612,13 @@ mod tests {
     #[should_panic(expected = r#""d" is not defined"#)]
     fn check_let_existence_return() {
         analyze(&Program {
-            nodes: vec![],
-            functions: vec![Function {
+            nodes: vec![Node::FunctionDef(Box::new(Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
                 body: Node::Block(vec![Node::Ret(Box::new(Node::Path(vec!["d".to_owned()])))]),
                 ty: "void".to_owned(),
                 mod_name: None,
-            }],
+            }))],
         });
     }
 
@@ -638,8 +626,7 @@ mod tests {
     #[should_panic(expected = r#""e" is not defined"#)]
     fn check_let_existence_struct() {
         analyze(&Program {
-            nodes: vec![],
-            functions: vec![Function {
+            nodes: vec![Node::FunctionDef(Box::new(Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
                 body: Node::Block(vec![Node::Struct(
@@ -648,7 +635,7 @@ mod tests {
                 )]),
                 ty: "void".to_owned(),
                 mod_name: None,
-            }],
+            }))],
         });
     }
 
@@ -656,14 +643,13 @@ mod tests {
     #[should_panic(expected = r#"cannot find type "Test""#)]
     fn check_enum_existence() {
         analyze(&Program {
-            nodes: vec![],
-            functions: vec![Function {
+            nodes: vec![Node::FunctionDef(Box::new(Function {
                 name: "main".to_owned(),
                 args: Vec::new(),
                 body: Node::Block(vec![Node::Path(vec!["Test".to_owned(), "A".to_owned()])]),
                 ty: "void".to_owned(),
                 mod_name: None,
-            }],
+            }))],
         });
     }
 
@@ -671,20 +657,22 @@ mod tests {
     #[should_panic(expected = r#"cannot find variant "B" in "Test""#)]
     fn check_enum_field_existence() {
         analyze(&Program {
-            nodes: vec![Node::EnumDef(EnumType {
-                name: "Test".to_owned(),
-                variants: vec![EnumVariant {
-                    name: "A".to_owned(),
-                    types: Vec::new(),
-                }],
-            })],
-            functions: vec![Function {
-                name: "main".to_owned(),
-                args: Vec::new(),
-                body: Node::Block(vec![Node::Path(vec!["Test".to_owned(), "B".to_owned()])]),
-                ty: "void".to_owned(),
-                mod_name: None,
-            }],
+            nodes: vec![
+                Node::EnumDef(EnumType {
+                    name: "Test".to_owned(),
+                    variants: vec![EnumVariant {
+                        name: "A".to_owned(),
+                        types: Vec::new(),
+                    }],
+                }),
+                Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![Node::Path(vec!["Test".to_owned(), "B".to_owned()])]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                })),
+            ],
         });
     }
 }

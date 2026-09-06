@@ -6,7 +6,6 @@ use crate::token::{Token, TokenKind};
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program {
     pub nodes: Vec<Node>,
-    pub functions: Vec<Function>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -66,6 +65,7 @@ pub enum Node {
     StructDef(StructType),
     ImplDef(ImplType),
     EnumDef(EnumType),
+    FunctionDef(Box<Function>),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
     Mul(Box<Node>, Box<Node>),
@@ -171,7 +171,6 @@ impl<'a> Parser<'a> {
 
     pub fn program(&mut self) -> Program {
         let mut nodes = Vec::new();
-        let mut functions = Vec::new();
 
         loop {
             if self.consume(TokenKind::Mod) {
@@ -183,7 +182,7 @@ impl<'a> Parser<'a> {
                 nodes.push(Node::Mod(identifier));
             } else if self.peek(TokenKind::Fn) {
                 let f = self.function();
-                functions.push(f);
+                nodes.push(Node::FunctionDef(Box::new(f)));
             } else if self.peek(TokenKind::Struct) {
                 nodes.push(self.struct_type());
             } else if self.peek(TokenKind::Enum) {
@@ -195,7 +194,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Program { nodes, functions }
+        Program { nodes }
     }
 
     fn function(&mut self) -> Function {

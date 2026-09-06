@@ -39,7 +39,7 @@ impl Loader {
             }
 
             let mod_program = self.load(Path::new(&format!("{m}.rs")), Some(m));
-            program.functions.extend(mod_program.functions);
+            program.nodes.extend(mod_program.nodes);
             mods.extend(self.get_mods(&program.nodes));
         }
 
