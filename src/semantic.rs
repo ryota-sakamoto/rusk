@@ -174,6 +174,9 @@ impl<'a> FunctionAnalyzer<'a> {
 
     fn analyze_node(&mut self, node: &'a Node) -> HirNode {
         match node {
+            Node::Mod(_) => {
+                unimplemented!()
+            }
             Node::Add(l, r) => {
                 let ln = self.analyze_node(l);
                 let rn = self.analyze_node(r);
@@ -469,7 +472,7 @@ mod tests {
     #[should_panic(expected = r#""main" is not defined"#)]
     fn check_main() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -481,7 +484,7 @@ mod tests {
     #[should_panic(expected = r#""f" is duplicated"#)]
     fn check_duplicated_function() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -515,7 +518,7 @@ mod tests {
     #[should_panic(expected = r#""b" is not defined"#)]
     fn check_let_existence() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -541,7 +544,7 @@ mod tests {
     #[should_panic(expected = r#""a" should be mut"#)]
     fn check_mut() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -565,7 +568,7 @@ mod tests {
     #[should_panic(expected = r#"expected i32, found i1"#)]
     fn check_assign_type() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -589,7 +592,7 @@ mod tests {
     #[should_panic(expected = r#""c" is not defined"#)]
     fn check_let_existence_if() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -615,7 +618,7 @@ mod tests {
     #[should_panic(expected = r#""d" is not defined"#)]
     fn check_let_existence_return() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -633,7 +636,7 @@ mod tests {
     #[should_panic(expected = r#""e" is not defined"#)]
     fn check_let_existence_struct() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -654,7 +657,7 @@ mod tests {
     #[should_panic(expected = r#"cannot find type "Test""#)]
     fn check_enum_existence() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![],
             impls: vec![],
@@ -672,7 +675,7 @@ mod tests {
     #[should_panic(expected = r#"cannot find variant "B" in "Test""#)]
     fn check_enum_field_existence() {
         analyze(&Program {
-            mods: vec![],
+            nodes: vec![],
             structs: vec![],
             enums: vec![EnumType {
                 name: "Test".to_owned(),

@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    ast::{self, Program},
+    ast::{self, Node, Program},
     token,
 };
 
@@ -32,7 +32,7 @@ impl Loader {
         let mut parser = ast::Parser::new(&tokens, mod_name);
         let mut program = parser.program();
 
-        let mut mods = program.mods.clone();
+        let mut mods = self.get_mods(&program.nodes);
         while let Some(m) = mods.pop() {
             if !self.resolved_mod.insert(m.clone()) {
                 continue;
@@ -40,9 +40,20 @@ impl Loader {
 
             let mod_program = self.load(Path::new(&format!("{m}.rs")), Some(m));
             program.functions.extend(mod_program.functions);
-            mods.extend(mod_program.mods.clone());
+            mods.extend(self.get_mods(&program.nodes));
         }
 
         program
+    }
+
+    fn get_mods(&self, nodes: &Vec<Node>) -> Vec<String> {
+        let mut mods = Vec::new();
+        for node in nodes {
+            if let Node::Mod(m) = node {
+                mods.push(m.clone());
+            }
+        }
+
+        mods
     }
 }
