@@ -35,19 +35,24 @@ impl<'a> Analyzer<'a> {
         self.analyze_functions();
 
         let mut struct_map = BTreeMap::new();
-        for s in &self.program.structs {
-            let mut fields_map = BTreeMap::new();
-            for (index, field) in s.fields.iter().enumerate() {
-                fields_map.insert(
-                    field.name.clone(),
-                    StructField {
-                        ty: Type::from_str(&field.ty).unwrap(),
-                        index,
-                    },
-                );
-            }
+        for n in &self.program.nodes {
+            match n {
+                Node::StructDef(s) => {
+                    let mut fields_map = BTreeMap::new();
+                    for (index, field) in s.fields.iter().enumerate() {
+                        fields_map.insert(
+                            field.name.clone(),
+                            StructField {
+                                ty: Type::from_str(&field.ty).unwrap(),
+                                index,
+                            },
+                        );
+                    }
 
-            struct_map.insert(s.name.clone(), fields_map);
+                    struct_map.insert(s.name.clone(), fields_map);
+                }
+                _ => {}
+            }
         }
 
         let mut enum_map = HashMap::new();
@@ -175,6 +180,9 @@ impl<'a> FunctionAnalyzer<'a> {
     fn analyze_node(&mut self, node: &'a Node) -> HirNode {
         match node {
             Node::Mod(_) => {
+                unimplemented!()
+            }
+            Node::StructDef(_) => {
                 unimplemented!()
             }
             Node::Add(l, r) => {
@@ -473,7 +481,6 @@ mod tests {
     fn check_main() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: Vec::new(),
@@ -485,7 +492,6 @@ mod tests {
     fn check_duplicated_function() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: vec![
@@ -519,7 +525,6 @@ mod tests {
     fn check_let_existence() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: vec![Function {
@@ -545,7 +550,6 @@ mod tests {
     fn check_mut() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: vec![Function {
@@ -569,7 +573,6 @@ mod tests {
     fn check_assign_type() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: vec![Function {
@@ -593,7 +596,6 @@ mod tests {
     fn check_let_existence_if() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: vec![Function {
@@ -619,7 +621,6 @@ mod tests {
     fn check_let_existence_return() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: vec![Function {
@@ -637,7 +638,6 @@ mod tests {
     fn check_let_existence_struct() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: vec![Function {
@@ -658,7 +658,6 @@ mod tests {
     fn check_enum_existence() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![],
             impls: vec![],
             functions: vec![Function {
@@ -676,7 +675,6 @@ mod tests {
     fn check_enum_field_existence() {
         analyze(&Program {
             nodes: vec![],
-            structs: vec![],
             enums: vec![EnumType {
                 name: "Test".to_owned(),
                 variants: vec![EnumVariant {

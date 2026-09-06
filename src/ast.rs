@@ -7,7 +7,6 @@ use crate::token::{Token, TokenKind};
 pub struct Program {
     pub nodes: Vec<Node>,
     pub functions: Vec<Function>,
-    pub structs: Vec<StructType>,
     pub enums: Vec<EnumType>,
     pub impls: Vec<ImplType>,
 }
@@ -66,6 +65,7 @@ pub struct Arg {
 #[derive(PartialEq, Eq, Debug)]
 pub enum Node {
     Mod(String),
+    StructDef(StructType),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
     Mul(Box<Node>, Box<Node>),
@@ -172,7 +172,6 @@ impl<'a> Parser<'a> {
     pub fn program(&mut self) -> Program {
         let mut nodes = Vec::new();
         let mut functions = Vec::new();
-        let mut structs = Vec::new();
         let mut enums = Vec::new();
         let mut impls = Vec::new();
 
@@ -188,7 +187,7 @@ impl<'a> Parser<'a> {
                 let f = self.function();
                 functions.push(f);
             } else if self.peek(TokenKind::Struct) {
-                structs.push(self.struct_type());
+                nodes.push(self.struct_type());
             } else if self.peek(TokenKind::Enum) {
                 enums.push(self.enum_type());
             } else if self.peek(TokenKind::Impl) {
@@ -201,7 +200,6 @@ impl<'a> Parser<'a> {
         Program {
             nodes,
             functions,
-            structs,
             enums,
             impls,
         }
@@ -259,7 +257,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn struct_type(&mut self) -> StructType {
+    fn struct_type(&mut self) -> Node {
         if !self.consume(TokenKind::Struct) {
             panic!("should be TokenKind::Struct");
         }
@@ -283,7 +281,7 @@ impl<'a> Parser<'a> {
             fields.push(Arg { name, ty });
         }
 
-        StructType { name, fields }
+        Node::StructDef(StructType { name, fields })
     }
 
     fn enum_type(&mut self) -> EnumType {
