@@ -134,6 +134,24 @@ impl<'a> Parser<'a> {
         false
     }
 
+    fn consume_all(&mut self, v: Vec<TokenKind>) -> bool {
+        let b = v.iter().enumerate().all(|(index, kind)| {
+            if let Some(t) = self.tokens.get(self.pos + index)
+                && &t.kind == kind
+            {
+                return true;
+            }
+            false
+        });
+        if b {
+            v.into_iter().for_each(|kind| {
+                self.consume(kind);
+            });
+        }
+
+        b
+    }
+
     fn peek(&self, kind: TokenKind) -> bool {
         if let Some(t) = self.current()
             && t.kind == kind
@@ -581,6 +599,16 @@ impl<'a> Parser<'a> {
                 }
 
                 return Node::Struct(identifier, fields);
+            }
+
+            if self.consume_all(vec![TokenKind::Plus, TokenKind::Assign]) {
+                return Node::Assign(
+                    Box::new(Node::Path(identifiers.clone())),
+                    Box::new(Node::Add(
+                        Box::new(Node::Path(identifiers)),
+                        Box::new(self.expr()),
+                    )),
+                );
             }
 
             if self.consume(TokenKind::Assign) {
