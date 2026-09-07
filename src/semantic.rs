@@ -194,11 +194,6 @@ impl<'a> FunctionAnalyzer<'a> {
 
     fn analyze_node(&mut self, node: &'a Node) -> HirNode {
         match node {
-            Node::Mod(_) => unimplemented!(),
-            Node::StructDef(_) => unimplemented!(),
-            Node::ImplDef(_) => unimplemented!(),
-            Node::EnumDef(_) => unimplemented!(),
-            Node::FunctionDef(_) => unimplemented!(),
             Node::Add(l, r) => {
                 let ln = self.analyze_node(l);
                 let rn = self.analyze_node(r);
@@ -460,6 +455,13 @@ impl<'a> FunctionAnalyzer<'a> {
                 let v = self.analyze_node(node);
                 let ty = self.type_of(&v);
                 HirNode::ArrayAccess(Box::new(v), Box::new(self.analyze_node(index)), ty.inner())
+            }
+            Node::Mod(_)
+            | Node::StructDef(_)
+            | Node::ImplDef(_)
+            | Node::EnumDef(_)
+            | Node::FunctionDef(_) => {
+                unimplemented!()
             }
         }
     }
