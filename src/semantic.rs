@@ -150,6 +150,7 @@ impl<'a> Analyzer<'a> {
 }
 
 struct FunctionAnalyzer<'a> {
+    function: &'a Function,
     functions: &'a HashMap<String, FunctionMetadata>,
     let_map: HashMap<&'a str, LetMetadata>,
     strings: &'a mut Vec<String>,
@@ -182,6 +183,7 @@ impl<'a> FunctionAnalyzer<'a> {
         }
 
         Self {
+            function,
             functions,
             let_map,
             strings,
@@ -297,9 +299,22 @@ impl<'a> FunctionAnalyzer<'a> {
                     return HirNode::Enum(identifiers[0].clone(), identifiers[1].clone(), fields);
                 }
 
+                let call_name = if identifiers.len() > 1 {
+                    identifiers.join("::")
+                } else {
+                    format!(
+                        "{}{}",
+                        self.function
+                            .mod_name
+                            .clone()
+                            .map_or("".to_owned(), |mod_name| format!("{mod_name}::")),
+                        name
+                    )
+                };
+
                 let f = self
                     .functions
-                    .get(name.as_str())
+                    .get(call_name.as_str())
                     .unwrap_or_else(|| panic!("{:?} is not defined", name));
 
                 if f.args.len() != args.len() {
@@ -312,7 +327,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 }
 
                 HirNode::Call(
-                    name.clone(),
+                    call_name,
                     args.iter().map(|v| self.analyze_node(v)).collect(),
                     f.ty.clone(),
                 )
