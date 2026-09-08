@@ -609,6 +609,14 @@ impl<'a> Parser<'a> {
                         Box::new(self.expr()),
                     )),
                 );
+            } else if self.consume_all(vec![TokenKind::Minus, TokenKind::Assign]) {
+                return Node::Assign(
+                    Box::new(Node::Path(identifiers.clone())),
+                    Box::new(Node::Sub(
+                        Box::new(Node::Path(identifiers)),
+                        Box::new(self.expr()),
+                    )),
+                );
             }
 
             if self.consume(TokenKind::Assign) {
