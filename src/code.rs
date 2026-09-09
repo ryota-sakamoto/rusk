@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use crate::ast::ComparisonType;
 use crate::hir::{Function, Node, Program, Type};
+use crate::scope::ScopeMap;
 
 pub fn generate(program: &Program) {
     let mut generator = Generator::new(program);
@@ -59,45 +60,11 @@ struct Value {
     ty: Type,
 }
 
-#[derive(Clone, Debug)]
-struct LetMap<'a> {
-    maps: Vec<HashMap<&'a str, Value>>,
-}
-
-impl<'a> LetMap<'a> {
-    fn new() -> Self {
-        Self { maps: Vec::new() }
-    }
-
-    fn get(&self, key: &str) -> Option<&Value> {
-        for m in self.maps.iter().rev() {
-            if m.contains_key(key) {
-                return m.get(key);
-            }
-        }
-
-        None
-    }
-
-    fn insert(&mut self, key: &'a str, value: Value) {
-        let m = self.maps.last_mut().unwrap();
-        m.insert(key, value);
-    }
-
-    fn new_stack(&mut self) {
-        self.maps.push(HashMap::new());
-    }
-
-    fn drop_stack(&mut self) {
-        self.maps.pop();
-    }
-}
-
 struct GenerateFunction<'a> {
     function: &'a Function,
     index: u64,
     label: u64,
-    map: LetMap<'a>,
+    map: ScopeMap<&'a str, Value>,
     enum_map: &'a HashMap<String, HashMap<String, usize>>,
     has_return: bool,
     terminated: bool,
@@ -111,7 +78,7 @@ impl<'a> GenerateFunction<'a> {
             function,
             index: 0,
             label: 0,
-            map: LetMap::new(),
+            map: ScopeMap::new(),
             enum_map,
             has_return: false,
             terminated: false,
@@ -311,7 +278,7 @@ impl<'a> GenerateFunction<'a> {
             }
             Node::RLet(name, ty) => {
                 let reg = self.new_reg();
-                let r = self.map.get(name.as_str()).unwrap();
+                let r = self.map.get(&name.as_str()).unwrap();
 
                 println!("  %r{reg} = load {}, ptr {}", ty, r.name);
                 Value {
@@ -639,7 +606,7 @@ impl<'a> GenerateFunction<'a> {
 
     fn generate_assign(&mut self, node: &'a Node) -> Value {
         match node {
-            Node::RLet(name, _) => self.map.get(name).unwrap().clone(),
+            Node::RLet(name, _) => self.map.get(&name.as_str()).unwrap().clone(),
             Node::ArrayAccess(node, index, _) => {
                 let reg = self.new_reg();
                 let l = self.generate_assign(node);

@@ -4,6 +4,7 @@ mod ast;
 mod code;
 mod hir;
 mod loader;
+mod scope;
 mod semantic;
 mod token;
 
