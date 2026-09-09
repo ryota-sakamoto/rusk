@@ -59,11 +59,45 @@ struct Value {
     ty: Type,
 }
 
+#[derive(Clone, Debug)]
+struct LetMap<'a> {
+    maps: Vec<HashMap<&'a str, Value>>,
+}
+
+impl<'a> LetMap<'a> {
+    fn new() -> Self {
+        Self { maps: Vec::new() }
+    }
+
+    fn get(&self, key: &str) -> Option<&Value> {
+        for m in self.maps.iter().rev() {
+            if m.contains_key(key) {
+                return m.get(key);
+            }
+        }
+
+        None
+    }
+
+    fn insert(&mut self, key: &'a str, value: Value) {
+        let m = self.maps.last_mut().unwrap();
+        m.insert(key, value);
+    }
+
+    fn new_stack(&mut self) {
+        self.maps.push(HashMap::new());
+    }
+
+    fn drop_stack(&mut self) {
+        self.maps.pop();
+    }
+}
+
 struct GenerateFunction<'a> {
     function: &'a Function,
     index: u64,
     label: u64,
-    map: HashMap<&'a str, Value>,
+    map: LetMap<'a>,
     enum_map: &'a HashMap<String, HashMap<String, usize>>,
     has_return: bool,
     terminated: bool,
@@ -77,7 +111,7 @@ impl<'a> GenerateFunction<'a> {
             function,
             index: 0,
             label: 0,
-            map: HashMap::new(),
+            map: LetMap::new(),
             enum_map,
             has_return: false,
             terminated: false,
@@ -94,6 +128,7 @@ impl<'a> GenerateFunction<'a> {
         let mut regs = Vec::new();
         let mut entry_instructions = Vec::new();
 
+        self.map.new_stack();
         for arg in self.function.args.iter() {
             let arg_reg = self.new_reg();
             let ty: Type = arg.ty.parse().unwrap();
@@ -454,9 +489,11 @@ impl<'a> GenerateFunction<'a> {
                 }
             }
             Node::Block(body) => {
+                self.map.new_stack();
                 for node in body {
                     self.generate_node(node);
                 }
+                self.map.drop_stack();
 
                 Value {
                     name: String::new(),
@@ -602,7 +639,7 @@ impl<'a> GenerateFunction<'a> {
 
     fn generate_assign(&mut self, node: &'a Node) -> Value {
         match node {
-            Node::RLet(name, _) => self.map[name.clone().as_str()].clone(),
+            Node::RLet(name, _) => self.map.get(name).unwrap().clone(),
             Node::ArrayAccess(node, index, _) => {
                 let reg = self.new_reg();
                 let l = self.generate_assign(node);

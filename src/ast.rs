@@ -427,6 +427,10 @@ impl<'a> Parser<'a> {
             return Node::Match(Box::new(node), conditions);
         }
 
+        if self.peek(TokenKind::LBrace) {
+            return self.block();
+        }
+
         let node = self.expr();
         if !self.consume(TokenKind::Semi) {
             panic!("should be TokenKind::SEMI");
