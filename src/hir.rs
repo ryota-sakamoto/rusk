@@ -61,6 +61,8 @@ pub enum Node {
     Not(Box<Node>),
     Struct(String, Vec<(usize, Node)>),
     Enum(String, String, Vec<Node>),
+    EnumLabel(String, String, Vec<String>),
+    EnumFieldAccess(Box<Node>, usize),
     Match(Box<Node>, Vec<(Node, Node)>),
     Array(Vec<Node>, Type),
     ArrayAccess(Box<Node>, Box<Node>, Type),

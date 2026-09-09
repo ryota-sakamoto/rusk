@@ -489,6 +489,23 @@ impl<'a> GenerateFunction<'a> {
                     ty: Type::Struct(name.clone()),
                 }
             }
+            Node::EnumLabel(name, variant, _) => {
+                let reg = self.new_reg();
+                println!("  %r{reg} = alloca %{name}");
+
+                let variant_index = self.enum_map[name.as_str()][variant.as_str()];
+                let field_reg = self.new_reg();
+                println!("  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 0");
+                println!("  store i32 {}, ptr %r{field_reg}", variant_index);
+
+                let val_reg = self.new_reg();
+                println!("  %r{val_reg} = load %{name}, ptr %r{reg}");
+
+                Value {
+                    name: format!("%r{val_reg}"),
+                    ty: Type::Enum(name.clone(), variant.clone()),
+                }
+            }
             Node::Enum(name, variant, fields) => {
                 let reg = self.new_reg();
                 println!("  %r{reg} = alloca %{name}");
@@ -515,6 +532,26 @@ impl<'a> GenerateFunction<'a> {
                 Value {
                     name: format!("%r{val_reg}"),
                     ty: Type::Enum(name.clone(), variant.clone()),
+                }
+            }
+            Node::EnumFieldAccess(node, index) => {
+                let ln = self.generate_node(node);
+                let reg = self.new_reg();
+                println!("  %r{reg} = alloca {}", ln.ty);
+                println!("  store {} {}, ptr %r{reg}", ln.ty, ln.name);
+
+                let field_pointer_reg = self.new_reg();
+                println!(
+                    "  %r{field_pointer_reg} = getelementptr {}, ptr %r{reg}, i32 0, i32 {index}",
+                    ln.ty
+                );
+
+                let field_reg = self.new_reg();
+                println!("  %r{field_reg} = load i32, ptr %r{field_pointer_reg}");
+
+                Value {
+                    name: format!("%r{field_reg}"),
+                    ty: Type::Int,
                 }
             }
             Node::Match(l, r) => {

@@ -157,6 +157,7 @@ struct FunctionAnalyzer<'a> {
     strings: &'a mut Vec<String>,
     struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     enum_map: &'a HashMap<String, HashMap<String, usize>>,
+    is_match_condition: bool,
 }
 
 struct LetMetadata {
@@ -191,6 +192,7 @@ impl<'a> FunctionAnalyzer<'a> {
             strings,
             struct_map,
             enum_map,
+            is_match_condition: false,
         }
     }
 
@@ -289,6 +291,27 @@ impl<'a> FunctionAnalyzer<'a> {
                 if self.enum_map.contains_key(&identifiers[0]) {
                     if !self.enum_map[&identifiers[0]].contains_key(&identifiers[1]) {
                         unimplemented!()
+                    }
+
+                    if self.is_match_condition {
+                        let mut fields = Vec::new();
+                        for a in args {
+                            let p = self.extract_node_path(a);
+                            // TODO: fix type
+                            self.let_map.insert(
+                                p,
+                                LetMetadata {
+                                    is_mut: false,
+                                    ty: Type::Int,
+                                },
+                            );
+                            fields.push(p.to_owned());
+                        }
+                        return HirNode::EnumLabel(
+                            identifiers[0].clone(),
+                            identifiers[1].clone(),
+                            fields,
+                        );
                     }
 
                     let mut fields = Vec::new();
@@ -443,7 +466,30 @@ impl<'a> FunctionAnalyzer<'a> {
             Node::Match(l, r) => HirNode::Match(
                 Box::new(self.analyze_node(l)),
                 r.iter()
-                    .map(|(a, b)| (self.analyze_node(a), self.analyze_node(b)))
+                    .map(|(a, b)| {
+                        self.is_match_condition = true;
+                        let cond = self.analyze_node(a);
+                        self.is_match_condition = false;
+
+                        let mut block = Vec::new();
+                        if let HirNode::EnumLabel(_, _, fields) = &cond {
+                            block.extend(fields.iter().enumerate().map(|(index, f)| {
+                                HirNode::Let(
+                                    f.to_string(),
+                                    Type::Int,
+                                    Box::new(HirNode::EnumFieldAccess(
+                                        Box::new(self.analyze_node(l)),
+                                        index + 1,
+                                    )),
+                                    false,
+                                )
+                            }));
+                        }
+
+                        block.push(self.analyze_node(b));
+
+                        (cond, HirNode::Block(block))
+                    })
                     .collect(),
             ),
             Node::Num(n) => HirNode::Num(*n),
@@ -474,6 +520,13 @@ impl<'a> FunctionAnalyzer<'a> {
             | Node::FunctionDef(_) => {
                 unimplemented!()
             }
+        }
+    }
+
+    fn extract_node_path(&mut self, node: &'a Node) -> &'a str {
+        match node {
+            Node::Path(p) => p.get(0).unwrap(),
+            _ => unimplemented!(),
         }
     }
 
