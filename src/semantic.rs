@@ -6,6 +6,7 @@ use crate::ast::{Arg, Function, Node, Program};
 use crate::hir::{
     Function as HirFunction, Node as HirNode, Program as HirProgram, StructField, Type,
 };
+use crate::scope::ScopeMap;
 
 pub fn analyze(program: &Program) -> HirProgram {
     let mut analyzer = Analyzer::new(program);
@@ -152,7 +153,7 @@ impl<'a> Analyzer<'a> {
 struct FunctionAnalyzer<'a> {
     function: &'a Function,
     functions: &'a HashMap<String, FunctionMetadata>,
-    let_map: HashMap<&'a str, LetMetadata>,
+    let_map: ScopeMap<&'a str, LetMetadata>,
     strings: &'a mut Vec<String>,
     struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     enum_map: &'a HashMap<String, HashMap<String, usize>>,
@@ -171,7 +172,8 @@ impl<'a> FunctionAnalyzer<'a> {
         struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
         enum_map: &'a HashMap<String, HashMap<String, usize>>,
     ) -> Self {
-        let mut let_map = HashMap::new();
+        let mut let_map = ScopeMap::new();
+        let_map.new_stack();
         for arg in &function.args {
             let_map.insert(
                 arg.name.as_str(),
@@ -249,10 +251,13 @@ impl<'a> FunctionAnalyzer<'a> {
             Node::Path(items) => {
                 if items.len() == 1 {
                     let name = &items[0];
-                    if !self.let_map.contains_key(&name.as_str()) {
+                    if self.let_map.get(&name.as_str()).is_none() {
                         panic!("{:?} is not defined", name);
                     }
-                    HirNode::RLet(name.clone(), self.let_map[name.as_str()].ty.clone())
+                    HirNode::RLet(
+                        name.clone(),
+                        self.let_map.get(&name.as_str()).unwrap().ty.clone(),
+                    )
                 } else if items.len() == 2 {
                     let name = &items[0];
                     let variant = &items[1];
@@ -364,7 +369,7 @@ impl<'a> FunctionAnalyzer<'a> {
 
                 let v = self
                     .let_map
-                    .get(name.as_str())
+                    .get(&name.as_str())
                     .unwrap_or_else(|| panic!("{:?} is not defined", name));
                 if !v.is_mut {
                     panic!("{:?} should be mut", name);
@@ -394,7 +399,13 @@ impl<'a> FunctionAnalyzer<'a> {
             ),
             Node::Break => HirNode::Break,
             Node::Continue => HirNode::Continue,
-            Node::Block(b) => HirNode::Block(b.iter().map(|v| self.analyze_node(v)).collect()),
+            Node::Block(b) => {
+                self.let_map.new_stack();
+                let block = HirNode::Block(b.iter().map(|v| self.analyze_node(v)).collect());
+                self.let_map.drop_stack();
+
+                block
+            }
             Node::Ret(r) => HirNode::Ret(Box::new(self.analyze_node(r))),
             Node::And(l, r) => {
                 let ln = self.analyze_node(l);
@@ -595,6 +606,37 @@ mod tests {
                     Node::Assign(
                         Box::new(Node::Path(vec!["a".to_owned()])),
                         Box::new(Node::Bool(false)),
+                    ),
+                ]),
+                ty: "void".to_owned(),
+                mod_name: None,
+            }))],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""b" is not defined"#)]
+    fn check_let_existence_scope() {
+        analyze(&Program {
+            nodes: vec![Node::FunctionDef(Box::new(Function {
+                name: "main".to_owned(),
+                args: Vec::new(),
+                body: Node::Block(vec![
+                    Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), false),
+                    Node::Block(vec![Node::Let(
+                        "b".to_owned(),
+                        None,
+                        Box::new(Node::Num(1)),
+                        false,
+                    )]),
+                    Node::Let(
+                        "c".to_owned(),
+                        None,
+                        Box::new(Node::Add(
+                            Box::new(Node::Path(vec!["a".to_owned()])),
+                            Box::new(Node::Path(vec!["b".to_owned()])),
+                        )),
+                        false,
                     ),
                 ]),
                 ty: "void".to_owned(),
