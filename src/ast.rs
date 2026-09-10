@@ -57,6 +57,7 @@ pub struct ImplType {
 pub struct Arg {
     pub name: String,
     pub ty: String,
+    pub is_pointer: bool,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -93,6 +94,8 @@ pub enum Node {
     FieldAccess(Box<Node>, String),
     Array(Vec<Node>),
     ArrayAccess(Box<Node>, Box<Node>),
+    Ref(Box<Node>),
+    Deref(Box<Node>),
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -233,6 +236,7 @@ impl<'a> Parser<'a> {
                     name: "self".to_owned(),
                     // TODO: use actual name
                     ty: "Test".to_owned(),
+                    is_pointer: false,
                 });
                 self.consume(TokenKind::Comma);
                 continue;
@@ -243,11 +247,16 @@ impl<'a> Parser<'a> {
                 panic!("should be TokenKind::COLON");
             }
 
+            let is_pointer = self.consume(TokenKind::And);
             let ty = self.identifier().expect("should be identifier");
 
             self.consume(TokenKind::Comma);
 
-            args.push(Arg { name, ty });
+            args.push(Arg {
+                name,
+                ty,
+                is_pointer,
+            });
         }
 
         let ty = if self.consume(TokenKind::Arrow) {
@@ -288,7 +297,11 @@ impl<'a> Parser<'a> {
 
             self.consume(TokenKind::Comma);
 
-            fields.push(Arg { name, ty });
+            fields.push(Arg {
+                name,
+                ty,
+                is_pointer: false,
+            });
         }
 
         Node::StructDef(StructType { name, fields })
@@ -457,7 +470,7 @@ impl<'a> Parser<'a> {
     fn expr(&mut self) -> Node {
         let mut node = self.equality();
 
-        if self.consume(TokenKind::And) {
+        if self.consume(TokenKind::AndAnd) {
             node = Node::And(Box::new(node), Box::new(self.equality()));
         } else if self.consume(TokenKind::Or) {
             node = Node::Or(Box::new(node), Box::new(self.equality()));
@@ -662,6 +675,14 @@ impl<'a> Parser<'a> {
                 self.consume(TokenKind::Comma);
             }
             return Node::Array(data);
+        }
+
+        if self.consume(TokenKind::And) {
+            return Node::Ref(Box::new(self.expr()));
+        }
+
+        if self.consume(TokenKind::Mul) {
+            return Node::Deref(Box::new(self.expr()));
         }
 
         self.literal()

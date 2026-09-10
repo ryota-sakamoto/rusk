@@ -166,6 +166,7 @@ struct FunctionAnalyzer<'a> {
     is_match_condition: bool,
 }
 
+#[derive(Debug)]
 struct LetMetadata {
     is_mut: bool,
     pub ty: Type,
@@ -186,7 +187,11 @@ impl<'a> FunctionAnalyzer<'a> {
                 arg.name.as_str(),
                 LetMetadata {
                     is_mut: false,
-                    ty: arg.ty.parse().unwrap(),
+                    ty: if arg.is_pointer {
+                        Type::Ptr(Box::new(arg.ty.parse().unwrap()))
+                    } else {
+                        arg.ty.parse().unwrap()
+                    },
                 },
             );
         }
@@ -519,6 +524,8 @@ impl<'a> FunctionAnalyzer<'a> {
                 let ty = self.type_of(&v);
                 HirNode::ArrayAccess(Box::new(v), Box::new(self.analyze_node(index)), ty.inner())
             }
+            Node::Ref(node) => HirNode::Ref(Box::new(self.analyze_node(node))),
+            Node::Deref(node) => HirNode::Deref(Box::new(self.analyze_node(node))),
             Node::Mod(_)
             | Node::StructDef(_)
             | Node::ImplDef(_)

@@ -105,7 +105,11 @@ impl<'a> GenerateFunction<'a> {
         self.map.new_stack();
         for arg in self.function.args.iter() {
             let arg_reg = self.new_reg();
-            let ty: Type = arg.ty.parse().unwrap();
+            let ty: Type = if arg.is_pointer {
+                Type::Ptr(Box::new(arg.ty.parse().unwrap()))
+            } else {
+                arg.ty.parse().unwrap()
+            };
             regs.push(format!("{ty} %r{arg_reg}"));
 
             let reg = self.new_reg();
@@ -643,6 +647,27 @@ impl<'a> GenerateFunction<'a> {
                 Value {
                     name: format!("%r{reg}"),
                     ty: ty.clone(),
+                }
+            }
+            Node::Ref(node) => {
+                let v = self.generate_node(node);
+                let reg = self.new_reg();
+                println!("  %r{reg} = alloca {}", v.ty);
+                println!("  store {} {}, ptr %r{reg}", v.ty, v.name);
+
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: Type::Ptr(Box::new(v.ty)),
+                }
+            }
+            Node::Deref(node) => {
+                let v = self.generate_node(node);
+                let reg = self.new_reg();
+                println!("  %r{reg} = load {}, ptr {}", v.ty.inner(), v.name);
+
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: v.ty.inner(),
                 }
             }
         }

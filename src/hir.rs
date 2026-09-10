@@ -66,6 +66,8 @@ pub enum Node {
     Match(Box<Node>, Vec<(Node, Node)>),
     Array(Vec<Node>, Type),
     ArrayAccess(Box<Node>, Box<Node>, Type),
+    Ref(Box<Node>),
+    Deref(Box<Node>),
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
