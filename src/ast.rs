@@ -311,6 +311,7 @@ impl<'a> Parser<'a> {
             if self.consume(TokenKind::LParen) {
                 while !self.consume(TokenKind::RParen) {
                     types.push(self.identifier().expect("should be identifier"));
+                    self.consume(TokenKind::Comma);
                 }
             }
 

@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use crate::ast::{Arg, Function, Node, Program};
 use crate::hir::{
-    Function as HirFunction, Node as HirNode, Program as HirProgram, StructField, Type,
+    EnumVariant, Function as HirFunction, Node as HirNode, Program as HirProgram, StructField, Type,
 };
 use crate::scope::ScopeMap;
 
@@ -78,7 +78,13 @@ impl<'a> Analyzer<'a> {
                 Node::EnumDef(e) => {
                     let mut variants_map = HashMap::new();
                     for (index, variant) in e.variants.iter().enumerate() {
-                        variants_map.insert(variant.name.clone(), index);
+                        variants_map.insert(
+                            variant.name.clone(),
+                            EnumVariant {
+                                index,
+                                types: variant.types.clone(),
+                            },
+                        );
                     }
 
                     enum_map.insert(e.name.clone(), variants_map);
@@ -156,7 +162,7 @@ struct FunctionAnalyzer<'a> {
     let_map: ScopeMap<&'a str, LetMetadata>,
     strings: &'a mut Vec<String>,
     struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
-    enum_map: &'a HashMap<String, HashMap<String, usize>>,
+    enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
     is_match_condition: bool,
 }
 
@@ -171,7 +177,7 @@ impl<'a> FunctionAnalyzer<'a> {
         functions: &'a HashMap<String, FunctionMetadata>,
         strings: &'a mut Vec<String>,
         struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
-        enum_map: &'a HashMap<String, HashMap<String, usize>>,
+        enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
     ) -> Self {
         let mut let_map = ScopeMap::new();
         let_map.new_stack();

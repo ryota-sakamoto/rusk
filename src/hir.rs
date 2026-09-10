@@ -11,7 +11,7 @@ pub struct Program {
     pub functions: Vec<Function>,
     pub strings: Vec<String>,
     pub struct_map: BTreeMap<String, BTreeMap<String, StructField>>,
-    pub enum_map: HashMap<String, HashMap<String, usize>>,
+    pub enum_map: HashMap<String, HashMap<String, EnumVariant>>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -126,4 +126,10 @@ impl Display for Type {
 pub struct StructField {
     pub ty: Type,
     pub index: usize,
+}
+
+#[derive(Debug)]
+pub struct EnumVariant {
+    pub index: usize,
+    pub types: Vec<String>,
 }

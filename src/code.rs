@@ -2,7 +2,7 @@ use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::ComparisonType;
-use crate::hir::{Function, Node, Program, Type};
+use crate::hir::{EnumVariant, Function, Node, Program, Type};
 use crate::scope::ScopeMap;
 
 pub fn generate(program: &Program) {
@@ -40,8 +40,12 @@ impl<'a> Generator<'a> {
             );
         }
 
-        for k in self.program.enum_map.keys() {
-            println!("%{} = type {{i32, [8 x i8]}}", k);
+        for (k, v) in &self.program.enum_map {
+            let max_fields = v.values().map(|v| v.types.len()).max().unwrap_or(0);
+            let mut fields = vec!["i32"];
+            fields.extend((0..max_fields).map(|_| "[8 x i8]"));
+
+            println!("%{} = type {{{}}}", k, fields.join(","));
         }
 
         println!("declare i32 @printf(ptr, ...)");
@@ -65,7 +69,7 @@ struct GenerateFunction<'a> {
     index: u64,
     label: u64,
     map: ScopeMap<&'a str, Value>,
-    enum_map: &'a HashMap<String, HashMap<String, usize>>,
+    enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
     has_return: bool,
     terminated: bool,
     next_start_label: Option<String>,
@@ -73,7 +77,10 @@ struct GenerateFunction<'a> {
 }
 
 impl<'a> GenerateFunction<'a> {
-    fn new(function: &'a Function, enum_map: &'a HashMap<String, HashMap<String, usize>>) -> Self {
+    fn new(
+        function: &'a Function,
+        enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
+    ) -> Self {
         Self {
             function,
             index: 0,
@@ -493,7 +500,7 @@ impl<'a> GenerateFunction<'a> {
                 let reg = self.new_reg();
                 println!("  %r{reg} = alloca %{name}");
 
-                let variant_index = self.enum_map[name.as_str()][variant.as_str()];
+                let variant_index = self.enum_map[name.as_str()][variant.as_str()].index;
                 let field_reg = self.new_reg();
                 println!("  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 0");
                 println!("  store i32 {}, ptr %r{field_reg}", variant_index);
@@ -510,7 +517,7 @@ impl<'a> GenerateFunction<'a> {
                 let reg = self.new_reg();
                 println!("  %r{reg} = alloca %{name}");
 
-                let variant_index = self.enum_map[name.as_str()][variant.as_str()];
+                let variant_index = self.enum_map[name.as_str()][variant.as_str()].index;
                 let field_reg = self.new_reg();
                 println!("  %r{field_reg} = getelementptr %{name}, ptr %r{reg}, i32 0, i32 0");
                 println!("  store i32 {}, ptr %r{field_reg}", variant_index);
@@ -684,7 +691,7 @@ impl<'a> GenerateFunction<'a> {
     fn extract_label_for_match(&mut self, value: Value) -> Value {
         match value.ty {
             Type::Enum(name, variant) => Value {
-                name: format!("{}", self.enum_map[&name][&variant]),
+                name: format!("{}", self.enum_map[&name][&variant].index),
                 ty: Type::Int,
             },
             _ => unimplemented!("{:?} cannot be label", value),
