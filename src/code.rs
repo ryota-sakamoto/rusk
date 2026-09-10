@@ -105,21 +105,16 @@ impl<'a> GenerateFunction<'a> {
         self.map.new_stack();
         for arg in self.function.args.iter() {
             let arg_reg = self.new_reg();
-            let ty: Type = if arg.is_pointer {
-                Type::Ptr(Box::new(arg.ty.parse().unwrap()))
-            } else {
-                arg.ty.parse().unwrap()
-            };
-            regs.push(format!("{ty} %r{arg_reg}"));
+            regs.push(format!("{} %r{arg_reg}", arg.ty));
 
             let reg = self.new_reg();
-            entry_instructions.push(format!("  %r{reg} = alloca {ty}"));
-            entry_instructions.push(format!("  store {ty} %r{arg_reg}, ptr %r{reg}"));
+            entry_instructions.push(format!("  %r{reg} = alloca {}", arg.ty));
+            entry_instructions.push(format!("  store {} %r{arg_reg}, ptr %r{reg}", arg.ty));
             self.map.insert(
                 &arg.name,
                 Value {
                     name: format!("%r{reg}"),
-                    ty: Type::Ptr(Box::new(ty)),
+                    ty: Type::Ptr(Box::new(arg.ty.clone())),
                 },
             );
         }

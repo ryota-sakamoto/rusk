@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::ast::{Arg, ComparisonType};
+use crate::ast::ComparisonType;
 
 #[derive(Debug)]
 pub struct Program {
@@ -134,4 +134,10 @@ pub struct StructField {
 pub struct EnumVariant {
     pub index: usize,
     pub types: Vec<String>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct Arg {
+    pub name: String,
+    pub ty: Type,
 }

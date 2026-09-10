@@ -4,7 +4,8 @@ use std::str::FromStr;
 
 use crate::ast::{Arg, Function, Node, Program};
 use crate::hir::{
-    EnumVariant, Function as HirFunction, Node as HirNode, Program as HirProgram, StructField, Type,
+    Arg as HirArg, EnumVariant, Function as HirFunction, Node as HirNode, Program as HirProgram,
+    StructField, Type,
 };
 use crate::scope::ScopeMap;
 
@@ -68,7 +69,18 @@ impl<'a> Analyzer<'a> {
 
                         functions.push(HirFunction {
                             name: format!("{}::{}", i.name, f.name),
-                            args: f.args.clone(),
+                            args: f
+                                .args
+                                .iter()
+                                .map(|arg| HirArg {
+                                    name: arg.name.clone(),
+                                    ty: if arg.is_pointer {
+                                        Type::Ptr(Box::new(arg.ty.parse().unwrap()))
+                                    } else {
+                                        arg.ty.parse().unwrap()
+                                    },
+                                })
+                                .collect(),
                             body: function_analyzer.analyze_node(&f.body),
                             ty: f.ty.clone(),
                             mod_name: f.mod_name.clone(),
@@ -100,7 +112,18 @@ impl<'a> Analyzer<'a> {
 
                 functions.push(HirFunction {
                     name: f.name.clone(),
-                    args: f.args.clone(),
+                    args: f
+                        .args
+                        .iter()
+                        .map(|arg| HirArg {
+                            name: arg.name.clone(),
+                            ty: if arg.is_pointer {
+                                Type::Ptr(Box::new(arg.ty.parse().unwrap()))
+                            } else {
+                                arg.ty.parse().unwrap()
+                            },
+                        })
+                        .collect(),
                     body: function_analyzer.analyze_node(&f.body),
                     ty: f.ty.clone(),
                     mod_name: f.mod_name.clone(),
