@@ -209,7 +209,7 @@ impl<'a> FunctionAnalyzer<'a> {
             let_map.insert(
                 arg.name.as_str(),
                 LetMetadata {
-                    is_mut: false,
+                    is_mut: arg.is_mut,
                     ty: if arg.is_pointer {
                         Type::Ptr(Box::new(arg.ty.parse().unwrap()))
                     } else {
@@ -548,6 +548,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 HirNode::ArrayAccess(Box::new(v), Box::new(self.analyze_node(index)), ty.inner())
             }
             Node::Ref(node) => HirNode::Ref(Box::new(self.analyze_node(node))),
+            Node::RefMut(node) => HirNode::Ref(Box::new(self.analyze_node(node))),
             Node::Deref(node) => HirNode::Deref(Box::new(self.analyze_node(node))),
             Node::Mod(_)
             | Node::StructDef(_)
@@ -571,6 +572,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::RLet(name, _) => name.to_string(),
             HirNode::ArrayAccess(v, _, _) => self.get_let_name(v),
             HirNode::FieldAccess(v, _, _) => self.get_let_name(v),
+            HirNode::Deref(v) => self.get_let_name(v),
             _ => unimplemented!("{:?}", node),
         }
     }
@@ -591,6 +593,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Comparison(_, _, _) => Type::Bool,
             HirNode::Array(data, ty) => Type::Array(Box::new(ty.clone()), data.len()),
             HirNode::ArrayAccess(_, _, ty) => ty.clone(),
+            HirNode::Deref(v) => self.type_of(v).inner(),
             _ => panic!("{:?} should be implemented", node),
         }
     }

@@ -644,17 +644,7 @@ impl<'a> GenerateFunction<'a> {
                     ty: ty.clone(),
                 }
             }
-            Node::Ref(node) => {
-                let v = self.generate_node(node);
-                let reg = self.new_reg();
-                println!("  %r{reg} = alloca {}", v.ty);
-                println!("  store {} {}, ptr %r{reg}", v.ty, v.name);
-
-                Value {
-                    name: format!("%r{reg}"),
-                    ty: Type::Ptr(Box::new(v.ty)),
-                }
-            }
+            Node::Ref(node) => self.generate_assign(node),
             Node::Deref(node) => {
                 let v = self.generate_node(node);
                 let reg = self.new_reg();
@@ -702,6 +692,16 @@ impl<'a> GenerateFunction<'a> {
                 Value {
                     name: format!("%r{reg}"),
                     ty: Type::Ptr(Box::new(ty.clone())),
+                }
+            }
+            Node::Deref(node) => {
+                let reg = self.new_reg();
+                let l = self.generate_assign(node);
+
+                println!("  %r{reg} = load {}, ptr {}", l.ty.inner(), l.name);
+                Value {
+                    name: format!("%r{reg}"),
+                    ty: l.ty.inner().clone(),
                 }
             }
             _ => unimplemented!("{:?} cannot be assigned", node),

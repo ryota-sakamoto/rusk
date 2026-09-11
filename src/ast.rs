@@ -58,6 +58,7 @@ pub struct Arg {
     pub name: String,
     pub ty: String,
     pub is_pointer: bool,
+    pub is_mut: bool,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -95,6 +96,7 @@ pub enum Node {
     Array(Vec<Node>),
     ArrayAccess(Box<Node>, Box<Node>),
     Ref(Box<Node>),
+    RefMut(Box<Node>),
     Deref(Box<Node>),
 }
 
@@ -237,6 +239,7 @@ impl<'a> Parser<'a> {
                     // TODO: use actual name
                     ty: "Test".to_owned(),
                     is_pointer: false,
+                    is_mut: false,
                 });
                 self.consume(TokenKind::Comma);
                 continue;
@@ -248,6 +251,7 @@ impl<'a> Parser<'a> {
             }
 
             let is_pointer = self.consume(TokenKind::And);
+            let is_mut = self.consume(TokenKind::Mut);
             let ty = self.identifier().expect("should be identifier");
 
             self.consume(TokenKind::Comma);
@@ -256,6 +260,7 @@ impl<'a> Parser<'a> {
                 name,
                 ty,
                 is_pointer,
+                is_mut,
             });
         }
 
@@ -301,6 +306,7 @@ impl<'a> Parser<'a> {
                 name,
                 ty,
                 is_pointer: false,
+                is_mut: false,
             });
         }
 
@@ -540,6 +546,7 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> Node {
+        let is_deref = self.consume(TokenKind::Mul);
         if self.is_identifier() {
             let mut identifiers = Vec::new();
             let identifier = self.identifier().expect("should be identifier");
@@ -637,11 +644,17 @@ impl<'a> Parser<'a> {
                 );
             }
 
+            let node = if is_deref {
+                Node::Deref(Box::new(Node::Path(identifiers)))
+            } else {
+                Node::Path(identifiers)
+            };
+
             if self.consume(TokenKind::Assign) {
-                return Node::Assign(Box::new(Node::Path(identifiers)), Box::new(self.expr()));
+                return Node::Assign(Box::new(node), Box::new(self.expr()));
             }
 
-            return Node::Path(identifiers);
+            return node;
         }
 
         if self.consume(TokenKind::LParen) {
@@ -678,11 +691,10 @@ impl<'a> Parser<'a> {
         }
 
         if self.consume(TokenKind::And) {
+            if self.consume(TokenKind::Mut) {
+                return Node::RefMut(Box::new(self.expr()));
+            }
             return Node::Ref(Box::new(self.expr()));
-        }
-
-        if self.consume(TokenKind::Mul) {
-            return Node::Deref(Box::new(self.expr()));
         }
 
         self.literal()
