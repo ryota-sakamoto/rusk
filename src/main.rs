@@ -1,4 +1,7 @@
-use std::{env::args, path::Path};
+use std::{
+    env::{args, current_dir},
+    path::Path,
+};
 
 mod ast;
 mod code;
@@ -14,12 +17,15 @@ fn main() {
         panic!("args should be specified.");
     }
 
+    let mut current = current_dir().unwrap();
+    current.push("std");
+
     let original_path = Path::new(&args[1]);
     let original_file = Path::new(original_path.file_name().unwrap());
     let base_dir = original_path.parent().unwrap().to_path_buf();
 
-    let mut l = loader::Loader::new(base_dir);
-    let program = l.load(original_file, None);
+    let mut l = loader::Loader::new(base_dir, current);
+    let program = l.load(original_file);
     let hir_program = semantic::analyze(&program);
     code::generate(&hir_program);
 }
