@@ -72,8 +72,8 @@ struct GenerateFunction<'a> {
     enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
     has_return: bool,
     terminated: bool,
-    next_start_label: Option<String>,
-    next_end_label: Option<String>,
+    next_start_label: Vec<String>,
+    next_end_label: Vec<String>,
 }
 
 impl<'a> GenerateFunction<'a> {
@@ -89,8 +89,8 @@ impl<'a> GenerateFunction<'a> {
             enum_map,
             has_return: false,
             terminated: false,
-            next_start_label: None,
-            next_end_label: None,
+            next_start_label: Vec::new(),
+            next_end_label: Vec::new(),
         }
     }
 
@@ -417,12 +417,15 @@ impl<'a> GenerateFunction<'a> {
                 );
 
                 println!("{while_label}:");
-                self.next_start_label = Some(cond_label.clone());
-                self.next_end_label = Some(whileend_label);
+                self.next_start_label.push(cond_label.clone());
+                self.next_end_label.push(whileend_label);
                 self.generate_node(body);
                 if !self.terminated {
                     println!("  br label %{cond_label}");
                 }
+
+                self.next_start_label.pop();
+                self.next_end_label.pop();
 
                 println!("whileend_{label}:");
 
@@ -433,7 +436,7 @@ impl<'a> GenerateFunction<'a> {
             }
             Node::Break => {
                 self.terminated = true;
-                let label = self.next_end_label.clone().unwrap();
+                let label = self.next_end_label.last().unwrap();
                 println!("  br label %{label}");
 
                 Value {
@@ -443,7 +446,7 @@ impl<'a> GenerateFunction<'a> {
             }
             Node::Continue => {
                 self.terminated = true;
-                let label = self.next_start_label.clone().unwrap();
+                let label = self.next_start_label.last().unwrap();
                 println!("  br label %{label}");
 
                 Value {
