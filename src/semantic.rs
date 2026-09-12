@@ -67,6 +67,7 @@ impl<'a> Analyzer<'a> {
                                 &struct_map,
                                 &enum_map,
                                 Some(i.name.clone()),
+                                m.name.clone(),
                             );
 
                             functions.push(HirFunction {
@@ -111,6 +112,7 @@ impl<'a> Analyzer<'a> {
                         &struct_map,
                         &enum_map,
                         None,
+                        m.name.clone(),
                     );
 
                     functions.push(HirFunction {
@@ -177,13 +179,13 @@ impl<'a> Analyzer<'a> {
 }
 
 struct FunctionAnalyzer<'a> {
-    function: &'a Function,
     functions: &'a HashMap<String, FunctionMetadata>,
     let_map: ScopeMap<&'a str, LetMetadata>,
     strings: &'a mut Vec<String>,
     struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
     is_match_condition: bool,
+    mod_name: Option<String>,
 }
 
 #[derive(Debug)]
@@ -200,6 +202,7 @@ impl<'a> FunctionAnalyzer<'a> {
         struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
         enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
         impl_name: Option<String>,
+        mod_name: Option<String>,
     ) -> Self {
         let mut let_map = ScopeMap::new();
         let_map.new_stack();
@@ -215,13 +218,13 @@ impl<'a> FunctionAnalyzer<'a> {
         }
 
         Self {
-            function,
             functions,
             let_map,
             strings,
             struct_map,
             enum_map,
             is_match_condition: false,
+            mod_name,
         }
     }
 
@@ -356,8 +359,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 } else {
                     format!(
                         "{}{}",
-                        self.function
-                            .mod_name
+                        self.mod_name
                             .clone()
                             .map_or("".to_owned(), |mod_name| format!("{mod_name}::")),
                         name
