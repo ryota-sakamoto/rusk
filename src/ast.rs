@@ -236,8 +236,7 @@ impl<'a> Parser<'a> {
             if self.consume(TokenKind::SelfValue) {
                 args.push(Arg {
                     name: "self".to_owned(),
-                    // TODO: use actual name
-                    ty: "Test".to_owned(),
+                    ty: "Self".to_owned(),
                     is_pointer: false,
                     is_mut: false,
                 });

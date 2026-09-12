@@ -65,6 +65,7 @@ impl<'a> Analyzer<'a> {
                             &mut strings,
                             &struct_map,
                             &enum_map,
+                            Some(i.name.clone()),
                         );
 
                         functions.push(HirFunction {
@@ -72,14 +73,7 @@ impl<'a> Analyzer<'a> {
                             args: f
                                 .args
                                 .iter()
-                                .map(|arg| HirArg {
-                                    name: arg.name.clone(),
-                                    ty: if arg.is_pointer {
-                                        Type::Ptr(Box::new(arg.ty.parse().unwrap()))
-                                    } else {
-                                        arg.ty.parse().unwrap()
-                                    },
-                                })
+                                .map(|arg| parse_arg(arg, Some(i.name.clone())))
                                 .collect(),
                             body: function_analyzer.analyze_node(&f.body),
                             ty: f.ty.clone(),
@@ -107,23 +101,18 @@ impl<'a> Analyzer<'a> {
 
         for node in &self.program.nodes {
             if let Node::FunctionDef(f) = node {
-                let mut function_analyzer =
-                    FunctionAnalyzer::new(f, &self.functions, &mut strings, &struct_map, &enum_map);
+                let mut function_analyzer = FunctionAnalyzer::new(
+                    f,
+                    &self.functions,
+                    &mut strings,
+                    &struct_map,
+                    &enum_map,
+                    None,
+                );
 
                 functions.push(HirFunction {
                     name: f.name.clone(),
-                    args: f
-                        .args
-                        .iter()
-                        .map(|arg| HirArg {
-                            name: arg.name.clone(),
-                            ty: if arg.is_pointer {
-                                Type::Ptr(Box::new(arg.ty.parse().unwrap()))
-                            } else {
-                                arg.ty.parse().unwrap()
-                            },
-                        })
-                        .collect(),
+                    args: f.args.iter().map(|arg| parse_arg(arg, None)).collect(),
                     body: function_analyzer.analyze_node(&f.body),
                     ty: f.ty.clone(),
                     mod_name: f.mod_name.clone(),
@@ -202,19 +191,17 @@ impl<'a> FunctionAnalyzer<'a> {
         strings: &'a mut Vec<String>,
         struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
         enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
+        impl_name: Option<String>,
     ) -> Self {
         let mut let_map = ScopeMap::new();
         let_map.new_stack();
         for arg in &function.args {
+            let a = parse_arg(arg, impl_name.clone());
             let_map.insert(
                 arg.name.as_str(),
                 LetMetadata {
                     is_mut: arg.is_mut,
-                    ty: if arg.is_pointer {
-                        Type::Ptr(Box::new(arg.ty.parse().unwrap()))
-                    } else {
-                        arg.ty.parse().unwrap()
-                    },
+                    ty: a.ty,
                 },
             );
         }
@@ -596,6 +583,24 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Deref(v) => self.type_of(v).inner(),
             _ => panic!("{:?} should be implemented", node),
         }
+    }
+}
+
+fn parse_arg(arg: &Arg, impl_name: Option<String>) -> HirArg {
+    let ty = if let Some(actual_ty) = impl_name.clone()
+        && arg.ty == "Self"
+    {
+        actual_ty.parse().unwrap()
+    } else {
+        arg.ty.parse().unwrap()
+    };
+    HirArg {
+        name: arg.name.clone(),
+        ty: if arg.is_pointer {
+            Type::Ptr(Box::new(ty))
+        } else {
+            ty
+        },
     }
 }
 
