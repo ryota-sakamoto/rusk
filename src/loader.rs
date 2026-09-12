@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    ast::{self, Node, Program},
+    ast::{self, Module, Node, Program},
     token,
 };
 
@@ -27,8 +27,9 @@ impl Loader {
     pub fn load(&mut self, file_path: &Path) -> Program {
         let mut program = self._load(file_path, None);
 
-        let p = self.load_file(self.std_dir.join("cmp.rs"), Some("std::cmp".to_string()));
-        program.nodes.extend(p.nodes);
+        program
+            .modules
+            .push(self.load_file(self.std_dir.join("cmp.rs"), Some("std::cmp".to_string())));
 
         program
     }
@@ -37,28 +38,30 @@ impl Loader {
         let original_file = Path::new(&file_path);
 
         let file_name = self.base_dir.join(original_file);
-        let mut program = self.load_file(file_name, mod_name);
+        let m = self.load_file(file_name, mod_name);
 
-        let mut mods = self.get_mods(&program.nodes);
+        let mut mods = self.get_mods(&m.nodes);
+        let mut modules = vec![m];
         while let Some(m) = mods.pop() {
             if !self.resolved_mod.insert(m.clone()) {
                 continue;
             }
 
-            let mod_program = self._load(Path::new(&format!("{m}.rs")), Some(m));
-            program.nodes.extend(mod_program.nodes);
-            mods.extend(self.get_mods(&program.nodes));
+            let file_name = self.base_dir.join(Path::new(&format!("{m}.rs")));
+            let module = self.load_file(file_name, Some(m));
+            mods.extend(self.get_mods(&module.nodes));
+            modules.push(module);
         }
 
-        program
+        Program { modules }
     }
 
-    fn load_file(&self, file_name: PathBuf, mod_name: Option<String>) -> Program {
+    fn load_file(&self, file_name: PathBuf, mod_name: Option<String>) -> Module {
         let p = fs::read_to_string(file_name).unwrap();
 
         let tokens = token::tokenize(&p);
-        let mut parser = ast::Parser::new(&tokens, mod_name);
-        parser.program()
+        let mut parser = ast::Parser::new(&tokens, mod_name.clone());
+        parser.module(mod_name)
     }
 
     fn get_mods(&self, nodes: &Vec<Node>) -> Vec<String> {

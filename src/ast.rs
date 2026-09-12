@@ -5,6 +5,12 @@ use crate::token::{Token, TokenKind};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program {
+    pub modules: Vec<Module>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct Module {
+    pub name: Option<String>,
     pub nodes: Vec<Node>,
 }
 
@@ -192,7 +198,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn program(&mut self) -> Program {
+    pub fn module(&mut self, name: Option<String>) -> Module {
         let mut nodes = Vec::new();
 
         loop {
@@ -217,7 +223,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Program { nodes }
+        Module { name, nodes }
     }
 
     fn function(&mut self) -> Function {
