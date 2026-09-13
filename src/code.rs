@@ -570,18 +570,22 @@ impl<'a> GenerateFunction<'a> {
                 let switch_default_label = format!("switch_{label}_default");
                 let mut switch_underscore_label = None;
 
-                let mut switch_labels = Vec::new();
+                let mut cases = Vec::new();
+                let mut blocks = Vec::new();
                 for (index, (cond, block)) in r.iter().enumerate() {
                     let switch_label = format!("switch_{label}_{index}");
                     if cond == &Node::Underscore {
                         switch_underscore_label = Some(switch_label.clone());
-                        switch_labels.push((switch_label, None, block));
-                        continue;
+                    } else {
+                        let cond_value = self.generate_node(cond);
+                        let value = self.extract_label_for_match(cond_value);
+                        cases.push(format!(
+                            "{} {}, label %{switch_label}",
+                            value.ty, value.name
+                        ));
                     }
 
-                    let cond_value = self.generate_node(cond);
-                    let value = self.extract_label_for_match(cond_value);
-                    switch_labels.push((switch_label.clone(), Some(value), block));
+                    blocks.push((switch_label, block));
                 }
 
                 let swicth_first_label =
@@ -591,23 +595,13 @@ impl<'a> GenerateFunction<'a> {
                     "  switch {} {}, label %{swicth_first_label} [{}]",
                     value.ty,
                     value.name,
-                    switch_labels
-                        .iter()
-                        .filter_map(|(switch_label, value, _)| value
-                            .clone()
-                            .map(|v| (switch_label, v)))
-                        .map(|(switch_label, value)| format!(
-                            "{} {}, label %{switch_label}",
-                            value.ty, value.name
-                        ))
-                        .collect::<Vec<_>>()
-                        .join(" ")
+                    cases.join(" ")
                 );
 
                 println!("{switch_default_label}:");
                 println!("  unreachable");
 
-                for (switch_label, _, block) in switch_labels {
+                for (switch_label, block) in blocks {
                     println!("{switch_label}:");
 
                     self.generate_node(block);
