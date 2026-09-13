@@ -647,6 +647,22 @@ impl<'a> Parser<'a> {
                         Box::new(self.expr()),
                     )),
                 );
+            } else if self.consume_all(vec![TokenKind::Mul, TokenKind::Assign]) {
+                return Node::Assign(
+                    Box::new(Node::Path(identifiers.clone())),
+                    Box::new(Node::Mul(
+                        Box::new(Node::Path(identifiers)),
+                        Box::new(self.expr()),
+                    )),
+                );
+            } else if self.consume_all(vec![TokenKind::Div, TokenKind::Assign]) {
+                return Node::Assign(
+                    Box::new(Node::Path(identifiers.clone())),
+                    Box::new(Node::Div(
+                        Box::new(Node::Path(identifiers)),
+                        Box::new(self.expr()),
+                    )),
+                );
             }
 
             let node = if is_deref {

@@ -582,6 +582,7 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::Add(_, _, ty) => ty.clone(),
             HirNode::Sub(_, _) => Type::Int,
             HirNode::Mul(_, _) => Type::Int,
+            HirNode::Div(_, _) => Type::Int,
             HirNode::RLet(_, ty) => ty.clone(),
             HirNode::FieldAccess(_, _, ty) => ty.clone(),
             HirNode::Call(_, _, ty) => ty.clone(),
