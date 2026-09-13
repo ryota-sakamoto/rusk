@@ -45,6 +45,7 @@ pub enum TokenKind {
     SelfValue,
     Underscore,
     Dot,
+    Pub,
     Identifier(String),
     Num(i32),
     String(String),
@@ -184,6 +185,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "match" => push_token(TokenKind::Match),
                     "impl" => push_token(TokenKind::Impl),
                     "self" => push_token(TokenKind::SelfValue),
+                    "pub" => push_token(TokenKind::Pub),
                     "_" => push_token(TokenKind::Underscore),
                     _ => push_token(TokenKind::Identifier(identifier)),
                 }

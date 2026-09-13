@@ -2,7 +2,7 @@
 struct Test {}
 
 impl Test {
-    fn f() -> i32 {
+    pub fn f() -> i32 {
         return 7;
     }
 }

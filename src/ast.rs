@@ -21,6 +21,7 @@ pub struct Function {
     pub body: Node,
     pub ty: String,
     pub mod_name: Option<String>,
+    pub is_public: bool,
 }
 
 impl Function {
@@ -210,7 +211,7 @@ impl<'a> Parser<'a> {
                 }
 
                 nodes.push(Node::Mod(identifier));
-            } else if self.peek(TokenKind::Fn) {
+            } else if self.peek(TokenKind::Fn) || self.peek(TokenKind::Pub) {
                 let f = self.function();
                 nodes.push(Node::FunctionDef(Box::new(f)));
             } else if self.peek(TokenKind::Struct) {
@@ -228,6 +229,7 @@ impl<'a> Parser<'a> {
     }
 
     fn function(&mut self) -> Function {
+        let is_public = self.consume(TokenKind::Pub);
         if !self.consume(TokenKind::Fn) {
             panic!("should be TokenKind::Fn");
         }
@@ -284,6 +286,7 @@ impl<'a> Parser<'a> {
             body,
             ty,
             mod_name: self.mod_name.clone(),
+            is_public,
         }
     }
 

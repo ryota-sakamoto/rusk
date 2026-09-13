@@ -199,6 +199,10 @@ impl<'a> FunctionAnalyzer<'a> {
                     .get(call_name.as_str())
                     .unwrap_or_else(|| panic!("{:?} is not defined", name));
 
+                if identifiers.len() > 1 && !f.is_public {
+                    panic!("{:?} is not public", name);
+                }
+
                 if f.args.len() != args.len() {
                     panic!(
                         "{:?} expects {} args, but specified {} args",

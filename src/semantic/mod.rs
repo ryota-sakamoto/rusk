@@ -141,6 +141,7 @@ impl<'a> Analyzer<'a> {
                                 FunctionMetadata {
                                     args: f.args.clone(),
                                     ty: f.ty.parse().unwrap(),
+                                    is_public: f.is_public,
                                 },
                             );
                         }
@@ -162,6 +163,7 @@ impl<'a> Analyzer<'a> {
                         FunctionMetadata {
                             args: f.args.clone(),
                             ty: f.ty.parse().unwrap(),
+                            is_public: f.is_public,
                         },
                     );
                 }
@@ -202,6 +204,7 @@ mod tests {
                         body: Node::Block(vec![]),
                         ty: "void".to_owned(),
                         mod_name: None,
+                        is_public: false,
                     })),
                     Node::FunctionDef(Box::new(Function {
                         name: "f".to_owned(),
@@ -209,6 +212,7 @@ mod tests {
                         body: Node::Block(vec![]),
                         ty: "void".to_owned(),
                         mod_name: None,
+                        is_public: false,
                     })),
                     Node::FunctionDef(Box::new(Function {
                         name: "main".to_owned(),
@@ -216,6 +220,7 @@ mod tests {
                         body: Node::Block(vec![]),
                         ty: "void".to_owned(),
                         mod_name: None,
+                        is_public: false,
                     })),
                 ],
             }],
@@ -242,6 +247,7 @@ mod tests {
                     )]),
                     ty: "void".to_owned(),
                     mod_name: None,
+                    is_public: false,
                 }))],
             }],
         });
@@ -265,6 +271,7 @@ mod tests {
                     ]),
                     ty: "void".to_owned(),
                     mod_name: None,
+                    is_public: false,
                 }))],
             }],
         });
@@ -288,6 +295,7 @@ mod tests {
                     ]),
                     ty: "void".to_owned(),
                     mod_name: None,
+                    is_public: false,
                 }))],
             }],
         });
@@ -322,6 +330,7 @@ mod tests {
                     ]),
                     ty: "void".to_owned(),
                     mod_name: None,
+                    is_public: false,
                 }))],
             }],
         });
@@ -347,6 +356,7 @@ mod tests {
                     )]),
                     ty: "void".to_owned(),
                     mod_name: None,
+                    is_public: false,
                 }))],
             }],
         });
@@ -364,6 +374,7 @@ mod tests {
                     body: Node::Block(vec![Node::Ret(Box::new(Node::Path(vec!["d".to_owned()])))]),
                     ty: "void".to_owned(),
                     mod_name: None,
+                    is_public: false,
                 }))],
             }],
         });
@@ -384,6 +395,7 @@ mod tests {
                     )]),
                     ty: "void".to_owned(),
                     mod_name: None,
+                    is_public: false,
                 }))],
             }],
         });
@@ -401,6 +413,7 @@ mod tests {
                     body: Node::Block(vec![Node::Path(vec!["Test".to_owned(), "A".to_owned()])]),
                     ty: "void".to_owned(),
                     mod_name: None,
+                    is_public: false,
                 }))],
             }],
         });
@@ -429,9 +442,44 @@ mod tests {
                         ])]),
                         ty: "void".to_owned(),
                         mod_name: None,
+                        is_public: false,
                     })),
                 ],
             }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""test::f" is not public"#)]
+    fn check_pub_fn() {
+        analyze(&Program {
+            modules: vec![
+                Module {
+                    name: None,
+                    nodes: vec![Node::FunctionDef(Box::new(Function {
+                        name: "main".to_owned(),
+                        args: vec![],
+                        body: Node::Block(vec![Node::PathCall(
+                            vec!["test".to_owned(), "f".to_owned()],
+                            vec![],
+                        )]),
+                        ty: "void".to_owned(),
+                        mod_name: None,
+                        is_public: false,
+                    }))],
+                },
+                Module {
+                    name: Some("test".to_owned()),
+                    nodes: vec![Node::FunctionDef(Box::new(Function {
+                        name: "f".to_owned(),
+                        args: vec![],
+                        body: Node::Block(vec![]),
+                        ty: "void".to_owned(),
+                        mod_name: Some("test".to_owned()),
+                        is_public: false,
+                    }))],
+                },
+            ],
         });
     }
 }
