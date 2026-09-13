@@ -567,33 +567,47 @@ impl<'a> GenerateFunction<'a> {
                 let ln = self.generate_node(l);
 
                 let label = self.new_label();
-                let switch_label = format!("switch_{label}_default");
+                let switch_default_label = format!("switch_{label}_default");
+                let mut switch_underscore_label = None;
 
                 let mut switch_labels = Vec::new();
-                for (index, (cond, _)) in r.iter().enumerate() {
+                for (index, (cond, block)) in r.iter().enumerate() {
+                    let switch_label = format!("switch_{label}_{index}");
+                    if cond == &Node::Underscore {
+                        switch_underscore_label = Some(switch_label.clone());
+                        switch_labels.push((switch_label, None, block));
+                        continue;
+                    }
+
                     let cond_value = self.generate_node(cond);
                     let value = self.extract_label_for_match(cond_value);
-
-                    let switch_label = format!("switch_{label}_{index}");
-                    switch_labels.push(format!(
-                        "{} {}, label %{switch_label}",
-                        value.ty, value.name
-                    ));
+                    switch_labels.push((switch_label.clone(), Some(value), block));
                 }
 
+                let swicth_first_label =
+                    switch_underscore_label.unwrap_or(switch_default_label.clone());
                 let value = self.extract_value_for_match(ln);
                 println!(
-                    "  switch {} {}, label %{switch_label} [{}]",
+                    "  switch {} {}, label %{swicth_first_label} [{}]",
                     value.ty,
                     value.name,
-                    switch_labels.join(" ")
+                    switch_labels
+                        .iter()
+                        .filter_map(|(switch_label, value, _)| value
+                            .clone()
+                            .map(|v| (switch_label, v)))
+                        .map(|(switch_label, value)| format!(
+                            "{} {}, label %{switch_label}",
+                            value.ty, value.name
+                        ))
+                        .collect::<Vec<_>>()
+                        .join(" ")
                 );
 
-                println!("{switch_label}:");
+                println!("{switch_default_label}:");
                 println!("  unreachable");
 
-                for (index, (_, block)) in r.iter().enumerate() {
-                    let switch_label = format!("switch_{label}_{index}");
+                for (switch_label, _, block) in switch_labels {
                     println!("{switch_label}:");
 
                     self.generate_node(block);
@@ -658,6 +672,7 @@ impl<'a> GenerateFunction<'a> {
                     ty: v.ty.inner(),
                 }
             }
+            Node::Underscore => unimplemented!(),
         }
     }
 

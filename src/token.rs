@@ -43,6 +43,7 @@ pub enum TokenKind {
     Match,
     Impl,
     SelfValue,
+    Underscore,
     Dot,
     Identifier(String),
     Num(i32),
@@ -157,10 +158,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
                 push_token(TokenKind::Num(num as i32));
             }
-            n if n.is_alphanumeric() => {
+            n if n.is_alphanumeric() || n == '_' => {
                 let mut identifier = String::new();
                 identifier.push(c);
-                while let Some(c2) = chars.next_if(|c2| c2.is_alphanumeric()) {
+                while let Some(c2) = chars.next_if(|c2| c2.is_alphanumeric() || c2 == &'_') {
                     identifier.push(c2);
                 }
 
@@ -183,6 +184,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "match" => push_token(TokenKind::Match),
                     "impl" => push_token(TokenKind::Impl),
                     "self" => push_token(TokenKind::SelfValue),
+                    "_" => push_token(TokenKind::Underscore),
                     _ => push_token(TokenKind::Identifier(identifier)),
                 }
             }

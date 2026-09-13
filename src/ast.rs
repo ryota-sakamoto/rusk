@@ -104,6 +104,7 @@ pub enum Node {
     Ref(Box<Node>),
     RefMut(Box<Node>),
     Deref(Box<Node>),
+    Underscore,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -676,6 +677,10 @@ impl<'a> Parser<'a> {
             }
 
             return node;
+        }
+
+        if self.consume(TokenKind::Underscore) {
+            return Node::Underscore;
         }
 
         if self.consume(TokenKind::LParen) {

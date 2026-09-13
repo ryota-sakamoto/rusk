@@ -68,6 +68,7 @@ pub enum Node {
     ArrayAccess(Box<Node>, Box<Node>, Type),
     Ref(Box<Node>),
     Deref(Box<Node>),
+    Underscore,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]

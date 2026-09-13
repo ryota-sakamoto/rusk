@@ -375,6 +375,7 @@ impl<'a> FunctionAnalyzer<'a> {
             Node::Ref(node) => HirNode::Ref(Box::new(self.analyze_node(node))),
             Node::RefMut(node) => HirNode::Ref(Box::new(self.analyze_node(node))),
             Node::Deref(node) => HirNode::Deref(Box::new(self.analyze_node(node))),
+            Node::Underscore => HirNode::Underscore,
             Node::Mod(_)
             | Node::StructDef(_)
             | Node::ImplDef(_)
