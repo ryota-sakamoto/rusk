@@ -153,16 +153,16 @@ impl<'a> FunctionAnalyzer<'a> {
                         unimplemented!()
                     }
 
+                    let e = &self.enum_map[&identifiers[0]][&identifiers[1]];
                     if self.is_match_condition {
                         let mut fields = Vec::new();
-                        for a in args {
+                        for (index, a) in args.iter().enumerate() {
                             let p = self.extract_node_path(a);
-                            // TODO: fix type
                             self.let_map.insert(
                                 p,
                                 LetMetadata {
                                     is_mut: false,
-                                    ty: Type::Int,
+                                    ty: e.types[index].parse().unwrap(),
                                 },
                             );
                             fields.push(p.to_owned());
