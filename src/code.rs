@@ -633,11 +633,14 @@ impl<'a> GenerateFunction<'a> {
                 }
 
                 let value_reg = self.new_reg();
-                println!("  %r{value_reg} = load [{} x i32], ptr %r{reg}", data.len());
+                println!(
+                    "  %r{value_reg} = load [{} x {ty}], ptr %r{reg}",
+                    data.len()
+                );
 
                 Value {
                     name: format!("%r{value_reg}"),
-                    ty: Type::Array(Box::new(Type::Int), data.len()),
+                    ty: Type::Array(Box::new(ty.clone()), data.len()),
                 }
             }
             Node::ArrayAccess(node, index, ty) => {
@@ -645,13 +648,21 @@ impl<'a> GenerateFunction<'a> {
                 let index = self.generate_node(index);
 
                 let reg = self.new_reg();
+                println!("  %r{reg} = alloca {}", array.ty);
+                println!("  store {} {}, ptr %r{reg}", array.ty, array.name);
+
+                let field_reg = self.new_reg();
                 println!(
-                    "  %r{reg} = extractvalue {} {}, {}",
-                    array.ty, array.name, index.name,
+                    "  %r{field_reg} = getelementptr {}, ptr %r{reg}, i32 {}",
+                    array.ty.inner(),
+                    index.name
                 );
 
+                let value_reg = self.new_reg();
+                println!("  %r{value_reg} = load {ty}, ptr %r{field_reg}");
+
                 Value {
-                    name: format!("%r{reg}"),
+                    name: format!("%r{value_reg}"),
                     ty: ty.clone(),
                 }
             }
