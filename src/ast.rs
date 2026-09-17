@@ -1,4 +1,3 @@
-use core::panic;
 use std::collections::BTreeMap;
 
 use crate::token::{Token, TokenKind};
@@ -74,6 +73,7 @@ pub enum Node {
     StructDef(StructType),
     ImplDef(ImplType),
     EnumDef(EnumType),
+    ConstDef(String, String, Box<Node>),
     FunctionDef(Box<Function>),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
@@ -220,6 +220,8 @@ impl<'a> Parser<'a> {
                 nodes.push(self.enum_type());
             } else if self.peek(TokenKind::Impl) {
                 nodes.push(self.impl_type());
+            } else if self.peek(TokenKind::Const) {
+                nodes.push(self.const_value());
             } else {
                 break;
             }
@@ -366,6 +368,29 @@ impl<'a> Parser<'a> {
         }
 
         Node::ImplDef(ImplType { name, functions })
+    }
+
+    fn const_value(&mut self) -> Node {
+        if !self.consume(TokenKind::Const) {
+            panic!("should be TokenKind::Const");
+        }
+
+        let identifier = self.identifier().expect("should be identifier");
+        if !self.consume(TokenKind::Colon) {
+            panic!("should be TokenKind::Colon");
+        }
+
+        let ty = self.identifier().expect("should be identifier");
+        if !self.consume(TokenKind::Assign) {
+            panic!("should be TokenKind::Eq");
+        }
+
+        let value = self.literal();
+        if !self.consume(TokenKind::Semi) {
+            panic!("should be TokenKind::Semi");
+        }
+
+        Node::ConstDef(identifier, ty, Box::new(value))
     }
 
     fn stmt(&mut self) -> Node {

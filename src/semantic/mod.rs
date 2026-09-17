@@ -35,6 +35,7 @@ impl<'a> Analyzer<'a> {
         let mut struct_map = BTreeMap::new();
         let mut strings = Vec::new();
         let mut enum_map = HashMap::new();
+        let mut const_map = HashMap::new();
 
         let mut functions = Vec::new();
         for m in &self.program.modules {
@@ -62,6 +63,7 @@ impl<'a> Analyzer<'a> {
                                 &mut strings,
                                 &struct_map,
                                 &enum_map,
+                                &const_map,
                                 Some(i.name.clone()),
                                 m.name.clone(),
                             );
@@ -93,6 +95,12 @@ impl<'a> Analyzer<'a> {
 
                         enum_map.insert(e.name.clone(), variants_map);
                     }
+                    Node::ConstDef(name, ty, value) => {
+                        if !Self::is_literal(value) {
+                            panic!("should be literal");
+                        }
+                        const_map.insert(name.clone(), (ty.parse().unwrap(), value));
+                    }
                     _ => {}
                 }
             }
@@ -107,6 +115,7 @@ impl<'a> Analyzer<'a> {
                         &mut strings,
                         &struct_map,
                         &enum_map,
+                        &const_map,
                         None,
                         m.name.clone(),
                     );
@@ -172,6 +181,13 @@ impl<'a> Analyzer<'a> {
 
         if !self.functions.contains_key("main") {
             panic!("{:?} is not defined", "main");
+        }
+    }
+
+    fn is_literal(node: &Node) -> bool {
+        match node {
+            Node::Num(_) | Node::Bool(_) => true,
+            _ => false,
         }
     }
 }

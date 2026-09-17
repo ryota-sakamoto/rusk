@@ -12,6 +12,7 @@ pub struct FunctionAnalyzer<'a> {
     strings: &'a mut Vec<String>,
     struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
+    const_map: &'a HashMap<String, (Type, &'a Node)>,
     is_match_condition: bool,
     mod_name: Option<String>,
 }
@@ -29,6 +30,7 @@ impl<'a> FunctionAnalyzer<'a> {
         strings: &'a mut Vec<String>,
         struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
         enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
+        const_map: &'a HashMap<String, (Type, &Node)>,
         impl_name: Option<String>,
         mod_name: Option<String>,
     ) -> Self {
@@ -51,6 +53,7 @@ impl<'a> FunctionAnalyzer<'a> {
             strings,
             struct_map,
             enum_map,
+            const_map,
             is_match_condition: false,
             mod_name,
         }
@@ -113,6 +116,16 @@ impl<'a> FunctionAnalyzer<'a> {
             Node::Path(items) => {
                 if items.len() == 1 {
                     let name = &items[0];
+                    if let Some((ty, node)) = self.const_map.get(name) {
+                        let v = self.analyze_node(node);
+                        let v_ty = self.type_of(&v);
+                        if ty != &v_ty {
+                            panic!("expected {}, found {}", ty, v_ty);
+                        }
+
+                        return v;
+                    }
+
                     if self.let_map.get(&name.as_str()).is_none() {
                         panic!("{:?} is not defined", name);
                     }
@@ -393,7 +406,8 @@ impl<'a> FunctionAnalyzer<'a> {
             | Node::StructDef(_)
             | Node::ImplDef(_)
             | Node::EnumDef(_)
-            | Node::FunctionDef(_) => {
+            | Node::FunctionDef(_)
+            | Node::ConstDef(_, _, _) => {
                 unimplemented!()
             }
         }
