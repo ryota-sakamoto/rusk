@@ -174,6 +174,15 @@ impl<'a> FunctionAnalyzer<'a> {
                         );
                     }
 
+                    if e.types.len() != args.len() {
+                        panic!(
+                            "{:?} expects {} args, but specified {} args",
+                            name,
+                            e.types.len(),
+                            args.len()
+                        );
+                    }
+
                     let mut fields = Vec::new();
                     for a in args {
                         fields.push(self.analyze_node(a));

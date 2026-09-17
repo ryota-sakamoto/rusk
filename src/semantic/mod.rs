@@ -178,7 +178,7 @@ impl<'a> Analyzer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::{collections::BTreeMap, vec};
 
     use crate::{
         ast::{EnumType, EnumVariant, Function, Module, Node, Program},
@@ -440,6 +440,36 @@ mod tests {
                             "Test".to_owned(),
                             "B".to_owned(),
                         ])]),
+                        ty: "void".to_owned(),
+                        mod_name: None,
+                        is_public: false,
+                    })),
+                ],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""Test::A" expects 2 args, but specified 0 args"#)]
+    fn check_enum_field_len() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![
+                    Node::EnumDef(EnumType {
+                        name: "Test".to_owned(),
+                        variants: vec![EnumVariant {
+                            name: "A".to_owned(),
+                            types: vec!["i32".to_owned(), "bool".to_owned()],
+                        }],
+                    }),
+                    Node::FunctionDef(Box::new(Function {
+                        name: "main".to_owned(),
+                        args: Vec::new(),
+                        body: Node::Block(vec![Node::PathCall(
+                            vec!["Test".to_owned(), "A".to_owned()],
+                            vec![],
+                        )]),
                         ty: "void".to_owned(),
                         mod_name: None,
                         is_public: false,
