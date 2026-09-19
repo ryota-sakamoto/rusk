@@ -385,7 +385,7 @@ impl<'a> Parser<'a> {
             panic!("should be TokenKind::Eq");
         }
 
-        let value = self.literal();
+        let value = self.expr();
         if !self.consume(TokenKind::Semi) {
             panic!("should be TokenKind::Semi");
         }

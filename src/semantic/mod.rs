@@ -187,6 +187,9 @@ impl<'a> Analyzer<'a> {
     fn is_literal(node: &Node) -> bool {
         match node {
             Node::Num(_) | Node::Bool(_) => true,
+            Node::Add(l, r) | Node::Sub(l, r) | Node::Mul(l, r) | Node::Div(l, r) => {
+                Self::is_literal(l) && Self::is_literal(r)
+            }
             _ => false,
         }
     }
