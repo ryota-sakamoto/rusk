@@ -26,12 +26,26 @@ impl Loader {
 
     pub fn load(&mut self, file_path: &Path) -> Program {
         let mut program = self._load(file_path, None);
-
+        program.modules.extend(self.load_std());
         program
-            .modules
-            .push(self.load_file(self.std_dir.join("cmp.rs"), Some("std::cmp".to_string())));
+    }
 
-        program
+    fn load_std(&self) -> Vec<Module> {
+        let mut result = Vec::new();
+        for f in fs::read_dir(&self.std_dir).unwrap() {
+            let p = f.unwrap().path();
+            if p.is_dir() {
+                continue;
+            }
+
+            let name = p
+                .file_name()
+                .and_then(|v| v.to_str())
+                .and_then(|v| v.strip_suffix(".rs"))
+                .unwrap();
+            result.push(self.load_file(p.clone(), Some(format!("std::{name}"))));
+        }
+        result
     }
 
     fn _load(&mut self, file_path: &Path, mod_name: Option<String>) -> Program {
