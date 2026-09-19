@@ -2,8 +2,9 @@ use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::ComparisonType;
-use crate::hir::{EnumVariant, Function, Node, Program, Type};
+use crate::hir::{EnumVariant, Function, Node, Program};
 use crate::scope::ScopeMap;
+use crate::types::Type;
 
 pub fn generate(program: &Program) {
     let mut generator = Generator::new(program);

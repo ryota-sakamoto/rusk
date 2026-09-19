@@ -1,10 +1,11 @@
 use std::collections::{BTreeMap, HashMap};
 
 use crate::ast::{Function, Node};
-use crate::hir::{EnumVariant, Node as HirNode, StructField, Type};
+use crate::hir::{EnumVariant, Node as HirNode, StructField};
 use crate::scope::ScopeMap;
 use crate::semantic::types::FunctionMetadata;
 use crate::semantic::utils::parse_arg;
+use crate::types::Type;
 
 pub struct FunctionAnalyzer<'a> {
     functions: &'a HashMap<String, FunctionMetadata>,

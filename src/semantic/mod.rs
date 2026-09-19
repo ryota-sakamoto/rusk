@@ -2,10 +2,11 @@ use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 
 use crate::ast::{Node, Program};
-use crate::hir::{EnumVariant, Function as HirFunction, Program as HirProgram, StructField, Type};
+use crate::hir::{EnumVariant, Function as HirFunction, Program as HirProgram, StructField};
 use crate::semantic::function::FunctionAnalyzer;
 use crate::semantic::types::FunctionMetadata;
 use crate::semantic::utils::parse_arg;
+use crate::types::Type;
 
 mod function;
 mod types;

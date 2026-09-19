@@ -10,6 +10,7 @@ mod loader;
 mod scope;
 mod semantic;
 mod token;
+mod types;
 
 fn main() {
     let args: Vec<String> = args().collect();

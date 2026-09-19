@@ -1,5 +1,6 @@
 use crate::ast::Arg;
-use crate::hir::{Arg as HirArg, Type};
+use crate::hir::Arg as HirArg;
+use crate::types::Type;
 
 pub fn parse_arg(arg: &Arg, impl_name: Option<String>) -> HirArg {
     let ty = if let Some(actual_ty) = impl_name.clone()

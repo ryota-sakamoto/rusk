@@ -1,5 +1,4 @@
-use crate::ast::Arg;
-use crate::hir::Type;
+use crate::{ast::Arg, types::Type};
 
 #[derive(Debug)]
 pub struct FunctionMetadata {
