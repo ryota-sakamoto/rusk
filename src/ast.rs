@@ -148,14 +148,7 @@ impl<'a> Parser<'a> {
     }
 
     fn consume_all(&mut self, v: Vec<TokenKind>) -> bool {
-        let b = v.iter().enumerate().all(|(index, kind)| {
-            if let Some(t) = self.tokens.get(self.pos + index)
-                && &t.kind == kind
-            {
-                return true;
-            }
-            false
-        });
+        let b = self.peek_all(&v);
         if b {
             v.into_iter().for_each(|kind| {
                 self.consume(kind);
@@ -173,6 +166,17 @@ impl<'a> Parser<'a> {
         }
 
         false
+    }
+
+    fn peek_all(&self, v: &[TokenKind]) -> bool {
+        v.iter().enumerate().all(|(index, kind)| {
+            if let Some(t) = self.tokens.get(self.pos + index)
+                && &t.kind == kind
+            {
+                return true;
+            }
+            false
+        })
     }
 
     fn identifier(&mut self) -> Option<String> {
@@ -211,7 +215,7 @@ impl<'a> Parser<'a> {
                 }
 
                 nodes.push(Node::Mod(identifier));
-            } else if self.peek(TokenKind::Fn) || self.peek(TokenKind::Pub) {
+            } else if self.peek_all(&[TokenKind::Pub, TokenKind::Fn]) || self.peek(TokenKind::Fn) {
                 let f = self.function();
                 nodes.push(Node::FunctionDef(Box::new(f)));
             } else if self.peek(TokenKind::Struct) {
