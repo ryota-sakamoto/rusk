@@ -12,7 +12,7 @@ pub struct FunctionAnalyzer<'a> {
     strings: &'a mut Vec<String>,
     struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
-    const_map: &'a HashMap<String, (Type, &'a Node)>,
+    const_map: &'a HashMap<String, (Type, Node)>,
     is_match_condition: bool,
     mod_name: Option<String>,
 }
@@ -30,7 +30,7 @@ impl<'a> FunctionAnalyzer<'a> {
         strings: &'a mut Vec<String>,
         struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
         enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
-        const_map: &'a HashMap<String, (Type, &Node)>,
+        const_map: &'a HashMap<String, (Type, Node)>,
         impl_name: Option<String>,
         mod_name: Option<String>,
     ) -> Self {

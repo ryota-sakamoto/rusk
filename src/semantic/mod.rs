@@ -96,10 +96,10 @@ impl<'a> Analyzer<'a> {
                         enum_map.insert(e.name.clone(), variants_map);
                     }
                     Node::ConstDef(name, ty, value) => {
-                        if !Self::is_literal(value) {
-                            panic!("should be literal");
-                        }
-                        const_map.insert(name.clone(), (ty.parse().unwrap(), value));
+                        const_map.insert(
+                            name.clone(),
+                            (ty.parse().unwrap(), Self::evaluate_const(value, &const_map)),
+                        );
                     }
                     _ => {}
                 }
@@ -184,13 +184,33 @@ impl<'a> Analyzer<'a> {
         }
     }
 
-    fn is_literal(node: &Node) -> bool {
+    fn evaluate_const(node: &Node, const_map: &HashMap<String, (Type, Node)>) -> Node {
         match node {
-            Node::Num(_) | Node::Bool(_) => true,
-            Node::Add(l, r) | Node::Sub(l, r) | Node::Mul(l, r) | Node::Div(l, r) => {
-                Self::is_literal(l) && Self::is_literal(r)
+            Node::Num(n) => Node::Num(*n),
+            Node::Bool(b) => Node::Bool(*b),
+            Node::Add(l, r) => {
+                match (
+                    Self::evaluate_const(l, const_map),
+                    Self::evaluate_const(r, const_map),
+                ) {
+                    (Node::Num(a), Node::Num(b)) => Node::Num(a + b),
+                    _ => unimplemented!(),
+                }
             }
-            _ => false,
+            Node::Mul(l, r) => {
+                match (
+                    Self::evaluate_const(l, const_map),
+                    Self::evaluate_const(r, const_map),
+                ) {
+                    (Node::Num(a), Node::Num(b)) => Node::Num(a * b),
+                    _ => unimplemented!(),
+                }
+            }
+            Node::Path(p) if p.len() == 1 => {
+                let (_, v) = const_map.get(&p[0]).unwrap();
+                v.clone()
+            }
+            _ => unimplemented!(),
         }
     }
 }

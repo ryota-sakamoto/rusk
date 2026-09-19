@@ -13,7 +13,7 @@ pub struct Module {
     pub nodes: Vec<Node>,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Function {
     pub name: String,
     pub args: Vec<Arg>,
@@ -53,7 +53,7 @@ pub struct EnumVariant {
     pub types: Vec<String>,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct ImplType {
     pub name: String,
     pub functions: Vec<Function>,
@@ -67,7 +67,7 @@ pub struct Arg {
     pub is_mut: bool,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Node {
     Mod(String),
     StructDef(StructType),
