@@ -188,23 +188,17 @@ impl<'a> Analyzer<'a> {
         match node {
             Node::Num(n) => Node::Num(*n),
             Node::Bool(b) => Node::Bool(*b),
-            Node::Add(l, r) => {
-                match (
-                    Self::evaluate_const(l, const_map),
-                    Self::evaluate_const(r, const_map),
-                ) {
-                    (Node::Num(a), Node::Num(b)) => Node::Num(a + b),
-                    _ => unimplemented!(),
-                }
+            Node::Add(l, r)
+                if let Node::Num(a) = Self::evaluate_const(l, const_map)
+                    && let Node::Num(b) = Self::evaluate_const(r, const_map) =>
+            {
+                Node::Num(a + b)
             }
-            Node::Mul(l, r) => {
-                match (
-                    Self::evaluate_const(l, const_map),
-                    Self::evaluate_const(r, const_map),
-                ) {
-                    (Node::Num(a), Node::Num(b)) => Node::Num(a * b),
-                    _ => unimplemented!(),
-                }
+            Node::Mul(l, r)
+                if let Node::Num(a) = Self::evaluate_const(l, const_map)
+                    && let Node::Num(b) = Self::evaluate_const(r, const_map) =>
+            {
+                Node::Num(a * b)
             }
             Node::Path(p) if p.len() == 1 => {
                 let (_, v) = const_map.get(&p[0]).unwrap();
