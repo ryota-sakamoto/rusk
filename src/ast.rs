@@ -38,7 +38,7 @@ impl Function {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct StructType {
     pub name: String,
-    pub fields: Vec<Arg>,
+    pub fields: Vec<StructField>,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -65,6 +65,12 @@ pub struct Arg {
     pub ty: String,
     pub is_pointer: bool,
     pub is_mut: bool,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct StructField {
+    pub name: String,
+    pub ty: String,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -317,12 +323,7 @@ impl<'a> Parser<'a> {
 
             self.consume(TokenKind::Comma);
 
-            fields.push(Arg {
-                name,
-                ty,
-                is_pointer: false,
-                is_mut: false,
-            });
+            fields.push(StructField { name, ty });
         }
 
         Node::StructDef(StructType { name, fields })
