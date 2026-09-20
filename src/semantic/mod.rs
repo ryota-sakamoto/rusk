@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, HashMap};
-use std::str::FromStr;
 
 use crate::ast::{Node, Program};
 use crate::hir::{EnumVariant, Function as HirFunction, Program as HirProgram, StructField};
@@ -48,7 +47,7 @@ impl<'a> Analyzer<'a> {
                             fields_map.insert(
                                 field.name.clone(),
                                 StructField {
-                                    ty: Type::from_str(&field.ty).unwrap(),
+                                    ty: field.ty.clone(),
                                     index,
                                 },
                             );

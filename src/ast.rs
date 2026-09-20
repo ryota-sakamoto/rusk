@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use crate::token::{Token, TokenKind};
+use crate::{
+    token::{Token, TokenKind},
+    types::Type,
+};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Program {
@@ -70,7 +73,7 @@ pub struct Arg {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct StructField {
     pub name: String,
-    pub ty: String,
+    pub ty: Type,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -319,7 +322,11 @@ impl<'a> Parser<'a> {
                 panic!("should be TokenKind::COLON");
             }
 
-            let ty = self.identifier().expect("should be identifier");
+            let ty = self
+                .identifier()
+                .expect("should be identifier")
+                .parse()
+                .unwrap();
 
             self.consume(TokenKind::Comma);
 
