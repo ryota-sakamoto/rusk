@@ -4,7 +4,7 @@ use crate::ast::{Function, Node};
 use crate::hir::{EnumVariant, Node as HirNode, StructField};
 use crate::scope::ScopeMap;
 use crate::semantic::types::FunctionMetadata;
-use crate::semantic::utils::parse_arg;
+use crate::semantic::utils::{parse_arg, type_of};
 use crate::types::Type;
 
 pub struct FunctionAnalyzer<'a> {
@@ -13,7 +13,7 @@ pub struct FunctionAnalyzer<'a> {
     strings: &'a mut Vec<String>,
     struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
     enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
-    const_map: &'a HashMap<String, (Type, Node)>,
+    const_map: &'a HashMap<String, Node>,
     is_match_condition: bool,
     mod_name: Option<String>,
 }
@@ -31,7 +31,7 @@ impl<'a> FunctionAnalyzer<'a> {
         strings: &'a mut Vec<String>,
         struct_map: &'a BTreeMap<String, BTreeMap<String, StructField>>,
         enum_map: &'a HashMap<String, HashMap<String, EnumVariant>>,
-        const_map: &'a HashMap<String, (Type, Node)>,
+        const_map: &'a HashMap<String, Node>,
         impl_name: Option<String>,
         mod_name: Option<String>,
     ) -> Self {
@@ -66,8 +66,8 @@ impl<'a> FunctionAnalyzer<'a> {
                 let ln = self.analyze_node(l);
                 let rn = self.analyze_node(r);
 
-                let ln_ty = self.type_of(&ln);
-                let rn_ty = self.type_of(&rn);
+                let ln_ty = type_of(&ln);
+                let rn_ty = type_of(&rn);
                 if ln_ty != rn_ty {
                     panic!("expected {}, found {}", ln_ty, rn_ty);
                 }
@@ -91,7 +91,7 @@ impl<'a> FunctionAnalyzer<'a> {
                 let actual_ty = ty
                     .clone()
                     .and_then(|ty| ty.parse::<Type>().ok())
-                    .unwrap_or(self.type_of(&rn));
+                    .unwrap_or(type_of(&rn));
 
                 self.let_map.insert(
                     name,
@@ -104,7 +104,7 @@ impl<'a> FunctionAnalyzer<'a> {
             }
             Node::FieldAccess(node, field) => {
                 let rn = self.analyze_node(node);
-                let ty = self.type_of(&rn);
+                let ty = type_of(&rn);
 
                 let struct_field = self
                     .struct_map
@@ -117,14 +117,8 @@ impl<'a> FunctionAnalyzer<'a> {
             Node::Path(items) => {
                 if items.len() == 1 {
                     let name = &items[0];
-                    if let Some((ty, node)) = self.const_map.get(name) {
-                        let v = self.analyze_node(node);
-                        let v_ty = self.type_of(&v);
-                        if ty != &v_ty {
-                            panic!("expected {}, found {}", ty, v_ty);
-                        }
-
-                        return v;
+                    if let Some(node) = self.const_map.get(name) {
+                        return self.analyze_node(node);
                     }
 
                     if self.let_map.get(&name.as_str()).is_none() {
@@ -243,7 +237,7 @@ impl<'a> FunctionAnalyzer<'a> {
             }
             Node::MethodCall(node, method, args) => {
                 let s = self.analyze_node(node);
-                let s_ty = self.type_of(&s);
+                let s_ty = type_of(&s);
                 let name = format!(
                     "{}::{}",
                     s_ty.to_string().strip_prefix("%").unwrap(),
@@ -284,8 +278,8 @@ impl<'a> FunctionAnalyzer<'a> {
                     panic!("{:?} should be mut", name);
                 }
 
-                let ln_ty = self.type_of(&ln);
-                let rn_ty = self.type_of(&rn);
+                let ln_ty = type_of(&ln);
+                let rn_ty = type_of(&rn);
                 if ln_ty != rn_ty {
                     panic!("expected {}, found {}", ln_ty, rn_ty);
                 }
@@ -320,8 +314,8 @@ impl<'a> FunctionAnalyzer<'a> {
                 let ln = self.analyze_node(l);
                 let rn = self.analyze_node(r);
 
-                let ln_ty = self.type_of(&ln);
-                let rn_ty = self.type_of(&rn);
+                let ln_ty = type_of(&ln);
+                let rn_ty = type_of(&rn);
                 if ln_ty != rn_ty {
                     panic!("expected {}, found {}", ln_ty, rn_ty);
                 }
@@ -332,8 +326,8 @@ impl<'a> FunctionAnalyzer<'a> {
                 let ln = self.analyze_node(l);
                 let rn = self.analyze_node(r);
 
-                let ln_ty = self.type_of(&ln);
-                let rn_ty = self.type_of(&rn);
+                let ln_ty = type_of(&ln);
+                let rn_ty = type_of(&rn);
                 if ln_ty != rn_ty {
                     panic!("expected {}, found {}", ln_ty, rn_ty);
                 }
@@ -391,12 +385,12 @@ impl<'a> FunctionAnalyzer<'a> {
                     .iter()
                     .map(|v| self.analyze_node(v))
                     .collect::<Vec<_>>();
-                let ty = self.type_of(&nodes[0]);
+                let ty = type_of(&nodes[0]);
                 HirNode::Array(nodes, ty)
             }
             Node::ArrayAccess(node, index) => {
                 let v = self.analyze_node(node);
-                let ty = self.type_of(&v);
+                let ty = type_of(&v);
                 HirNode::ArrayAccess(Box::new(v), Box::new(self.analyze_node(index)), ty.inner())
             }
             Node::Ref(node) => HirNode::Ref(Box::new(self.analyze_node(node))),
@@ -428,28 +422,6 @@ impl<'a> FunctionAnalyzer<'a> {
             HirNode::FieldAccess(v, _, _) => self.get_let_name(v),
             HirNode::Deref(v) => self.get_let_name(v),
             _ => unimplemented!("{:?}", node),
-        }
-    }
-
-    fn type_of(&self, node: &HirNode) -> Type {
-        // TODO: fix all type
-        match node {
-            HirNode::Num(_) => Type::Int,
-            HirNode::Bool(_) => Type::Bool,
-            HirNode::Add(_, _, ty) => ty.clone(),
-            HirNode::Sub(_, _) => Type::Int,
-            HirNode::Mul(_, _) => Type::Int,
-            HirNode::Div(_, _) => Type::Int,
-            HirNode::RLet(_, ty) => ty.clone(),
-            HirNode::FieldAccess(_, _, ty) => ty.clone(),
-            HirNode::Call(_, _, ty) => ty.clone(),
-            HirNode::Struct(name, _) => Type::Struct(name.clone()),
-            HirNode::Enum(name, variant, _) => Type::Enum(name.clone(), variant.clone()),
-            HirNode::Comparison(_, _, _) => Type::Bool,
-            HirNode::Array(data, ty) => Type::Array(Box::new(ty.clone()), data.len()),
-            HirNode::ArrayAccess(_, _, ty) => ty.clone(),
-            HirNode::Deref(v) => self.type_of(v).inner(),
-            _ => panic!("{:?} should be implemented", node),
         }
     }
 }

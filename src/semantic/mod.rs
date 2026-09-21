@@ -96,10 +96,17 @@ impl<'a> Analyzer<'a> {
                         enum_map.insert(e.name.clone(), variants_map);
                     }
                     Node::ConstDef(name, ty, value) => {
-                        const_map.insert(
-                            name.clone(),
-                            (ty.parse().unwrap(), Self::evaluate_const(value, &const_map)),
-                        );
+                        let v = Self::evaluate_const(value, &const_map);
+                        let v_ty = match v {
+                            Node::Num(_) => Type::Int,
+                            Node::Bool(_) => Type::Bool,
+                            _ => unimplemented!(),
+                        };
+                        if ty != &v_ty {
+                            panic!("expected {}, found {}", ty, v_ty);
+                        }
+
+                        const_map.insert(name.clone(), v);
                     }
                     _ => {}
                 }
@@ -184,7 +191,7 @@ impl<'a> Analyzer<'a> {
         }
     }
 
-    fn evaluate_const(node: &Node, const_map: &HashMap<String, (Type, Node)>) -> Node {
+    fn evaluate_const(node: &Node, const_map: &HashMap<String, Node>) -> Node {
         match node {
             Node::Num(n) => Node::Num(*n),
             Node::Bool(b) => Node::Bool(*b),
@@ -201,7 +208,7 @@ impl<'a> Analyzer<'a> {
                 Node::Num(a * b)
             }
             Node::Path(p) if p.len() == 1 => {
-                let (_, v) = const_map.get(&p[0]).unwrap();
+                let v = const_map.get(&p[0]).unwrap();
                 v.clone()
             }
             _ => unimplemented!(),
@@ -216,6 +223,7 @@ mod tests {
     use crate::{
         ast::{EnumType, EnumVariant, Function, Module, Node, Program},
         semantic::analyze,
+        types::Type,
     };
 
     #[test]
@@ -543,6 +551,27 @@ mod tests {
                     }))],
                 },
             ],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"expected i32, found i1"#)]
+    fn check_const_ty() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![
+                    Node::ConstDef("A".to_owned(), Type::Int, Box::new(Node::Bool(false))),
+                    Node::FunctionDef(Box::new(Function {
+                        name: "main".to_owned(),
+                        args: vec![],
+                        body: Node::Block(vec![]),
+                        ty: "void".to_owned(),
+                        mod_name: None,
+                        is_public: false,
+                    })),
+                ],
+            }],
         });
     }
 }

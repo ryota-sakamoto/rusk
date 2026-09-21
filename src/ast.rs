@@ -82,7 +82,7 @@ pub enum Node {
     StructDef(StructType),
     ImplDef(ImplType),
     EnumDef(EnumType),
-    ConstDef(String, String, Box<Node>),
+    ConstDef(String, Type, Box<Node>),
     FunctionDef(Box<Function>),
     Add(Box<Node>, Box<Node>),
     Sub(Box<Node>, Box<Node>),
@@ -402,7 +402,7 @@ impl<'a> Parser<'a> {
             panic!("should be TokenKind::Semi");
         }
 
-        Node::ConstDef(identifier, ty, Box::new(value))
+        Node::ConstDef(identifier, ty.parse().unwrap(), Box::new(value))
     }
 
     fn stmt(&mut self) -> Node {
