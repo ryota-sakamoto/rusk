@@ -425,3 +425,265 @@ impl<'a> FunctionAnalyzer<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use crate::{
+        ast::{EnumType, EnumVariant, Function, Module, Node, Program},
+        semantic::analyze,
+    };
+
+    #[test]
+    #[should_panic(expected = r#""b" is not defined"#)]
+    fn check_let_existence() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![Node::Let(
+                        "a".to_owned(),
+                        None,
+                        Box::new(Node::Add(
+                            Box::new(Node::Path(vec!["b".to_owned()])),
+                            Box::new(Node::Num(1)),
+                        )),
+                        false,
+                    )]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""a" should be mut"#)]
+    fn check_mut() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![
+                        Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), false),
+                        Node::Assign(
+                            Box::new(Node::Path(vec!["a".to_owned()])),
+                            Box::new(Node::Num(3)),
+                        ),
+                    ]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"expected i32, found i1"#)]
+    fn check_assign_type() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![
+                        Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), true),
+                        Node::Assign(
+                            Box::new(Node::Path(vec!["a".to_owned()])),
+                            Box::new(Node::Bool(false)),
+                        ),
+                    ]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""b" is not defined"#)]
+    fn check_let_existence_scope() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![
+                        Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), false),
+                        Node::Block(vec![Node::Let(
+                            "b".to_owned(),
+                            None,
+                            Box::new(Node::Num(1)),
+                            false,
+                        )]),
+                        Node::Let(
+                            "c".to_owned(),
+                            None,
+                            Box::new(Node::Add(
+                                Box::new(Node::Path(vec!["a".to_owned()])),
+                                Box::new(Node::Path(vec!["b".to_owned()])),
+                            )),
+                            false,
+                        ),
+                    ]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""c" is not defined"#)]
+    fn check_let_existence_if() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![Node::If(
+                        Box::new(Node::Comparison(
+                            crate::ast::ComparisonType::Eq,
+                            Box::new(Node::Path(vec!["c".to_owned()])),
+                            Box::new(Node::Num(10)),
+                        )),
+                        Box::new(Node::Block(vec![])),
+                        None,
+                    )]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""d" is not defined"#)]
+    fn check_let_existence_return() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![Node::Ret(Box::new(Node::Path(vec!["d".to_owned()])))]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""e" is not defined"#)]
+    fn check_let_existence_struct() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![Node::Struct(
+                        "Test".to_owned(),
+                        BTreeMap::from([("a".to_owned(), Node::Path(vec!["e".to_owned()]))]),
+                    )]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"cannot find type "Test""#)]
+    fn check_enum_existence() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![Node::Path(vec!["Test".to_owned(), "A".to_owned()])]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"cannot find variant "B" in "Test""#)]
+    fn check_enum_field_existence() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![
+                    Node::EnumDef(EnumType {
+                        name: "Test".to_owned(),
+                        variants: vec![EnumVariant {
+                            name: "A".to_owned(),
+                            types: Vec::new(),
+                        }],
+                    }),
+                    Node::FunctionDef(Box::new(Function {
+                        name: "main".to_owned(),
+                        args: Vec::new(),
+                        body: Node::Block(vec![Node::Path(vec![
+                            "Test".to_owned(),
+                            "B".to_owned(),
+                        ])]),
+                        ty: "void".to_owned(),
+                        mod_name: None,
+                        is_public: false,
+                    })),
+                ],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#""Test::A" expects 2 args, but specified 0 args"#)]
+    fn check_enum_field_len() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![
+                    Node::EnumDef(EnumType {
+                        name: "Test".to_owned(),
+                        variants: vec![EnumVariant {
+                            name: "A".to_owned(),
+                            types: vec!["i32".to_owned(), "bool".to_owned()],
+                        }],
+                    }),
+                    Node::FunctionDef(Box::new(Function {
+                        name: "main".to_owned(),
+                        args: Vec::new(),
+                        body: Node::Block(vec![Node::PathCall(
+                            vec!["Test".to_owned(), "A".to_owned()],
+                            vec![],
+                        )]),
+                        ty: "void".to_owned(),
+                        mod_name: None,
+                        is_public: false,
+                    })),
+                ],
+            }],
+        });
+    }
+}
