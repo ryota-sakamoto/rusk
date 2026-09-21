@@ -123,9 +123,9 @@ impl<'a> GenerateFunction<'a> {
         println!(
             "define {} @\"{}\"({}) {{",
             if self.is_main() {
-                "i32"
+                Type::Int
             } else {
-                self.function.ty.as_str()
+                self.function.ty.clone()
             },
             self.function.full_name(),
             regs.into_iter().collect::<Vec<String>>().join(", "),
@@ -137,7 +137,7 @@ impl<'a> GenerateFunction<'a> {
         self.generate_node(&self.function.body);
 
         if !self.has_return {
-            if self.function.ty != "void" {
+            if self.function.ty != Type::Void {
                 panic!("should have return");
             } else if self.is_main() {
                 println!("  ret i32 0");

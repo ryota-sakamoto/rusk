@@ -21,7 +21,7 @@ pub struct Function {
     pub name: String,
     pub args: Vec<Arg>,
     pub body: Node,
-    pub ty: String,
+    pub ty: Type,
     pub mod_name: Option<String>,
     pub is_public: bool,
 }
@@ -288,9 +288,12 @@ impl<'a> Parser<'a> {
         }
 
         let ty = if self.consume(TokenKind::Arrow) {
-            self.identifier().expect("should be identifier")
+            self.identifier()
+                .expect("should be identifier")
+                .parse()
+                .unwrap()
         } else {
-            "void".to_owned()
+            Type::Void
         };
 
         let body = self.block();

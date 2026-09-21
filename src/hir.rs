@@ -15,7 +15,7 @@ pub struct Function {
     pub name: String,
     pub args: Vec<Arg>,
     pub body: Node,
-    pub ty: String,
+    pub ty: Type,
     pub mod_name: Option<String>,
 }
 
