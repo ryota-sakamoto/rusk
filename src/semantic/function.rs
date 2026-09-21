@@ -88,10 +88,7 @@ impl<'a> FunctionAnalyzer<'a> {
             ),
             Node::Let(name, ty, node, is_mut) => {
                 let rn = self.analyze_node(node);
-                let actual_ty = ty
-                    .clone()
-                    .and_then(|ty| ty.parse::<Type>().ok())
-                    .unwrap_or(type_of(&rn));
+                let actual_ty = ty.clone().unwrap_or(type_of(&rn));
 
                 self.let_map.insert(
                     name,
@@ -433,6 +430,7 @@ mod tests {
     use crate::{
         ast::{EnumType, EnumVariant, Function, Module, Node, Program},
         semantic::analyze,
+        types::Type,
     };
 
     #[test]
@@ -496,6 +494,35 @@ mod tests {
                     args: Vec::new(),
                     body: Node::Block(vec![
                         Node::Let("a".to_owned(), None, Box::new(Node::Num(1)), true),
+                        Node::Assign(
+                            Box::new(Node::Path(vec!["a".to_owned()])),
+                            Box::new(Node::Bool(false)),
+                        ),
+                    ]),
+                    ty: "void".to_owned(),
+                    mod_name: None,
+                    is_public: false,
+                }))],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"expected i8, found i1"#)]
+    fn check_assign_type_specified() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![Node::FunctionDef(Box::new(Function {
+                    name: "main".to_owned(),
+                    args: Vec::new(),
+                    body: Node::Block(vec![
+                        Node::Let(
+                            "a".to_owned(),
+                            Some(Type::Int8),
+                            Box::new(Node::Num(1)),
+                            true,
+                        ),
                         Node::Assign(
                             Box::new(Node::Path(vec!["a".to_owned()])),
                             Box::new(Node::Bool(false)),

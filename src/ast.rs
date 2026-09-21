@@ -92,7 +92,7 @@ pub enum Node {
     String(String),
     Bool(bool),
     Ret(Box<Node>),
-    Let(String, Option<String>, Box<Node>, bool),
+    Let(String, Option<Type>, Box<Node>, bool),
     Path(Vec<String>),
     PathCall(Vec<String>, Vec<Node>),
     Assign(Box<Node>, Box<Node>),
@@ -467,7 +467,12 @@ impl<'a> Parser<'a> {
                 panic!("should be TokenKind::SEMI");
             }
 
-            return Node::Let(identifier, ty, Box::new(node), is_mut);
+            return Node::Let(
+                identifier,
+                ty.map(|v| v.parse().ok()).flatten(),
+                Box::new(node),
+                is_mut,
+            );
         }
 
         if self.consume(TokenKind::Match) {
