@@ -33,6 +33,13 @@ impl Type {
             _ => unimplemented!("{:?}", self),
         }
     }
+
+    pub fn struct_name(&self) -> String {
+        match self {
+            Type::Struct(name) => name.clone(),
+            _ => unimplemented!("{:?}", self),
+        }
+    }
 }
 
 impl Display for Type {

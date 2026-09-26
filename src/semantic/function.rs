@@ -101,13 +101,9 @@ impl<'a> FunctionAnalyzer<'a> {
             }
             Node::FieldAccess(node, field) => {
                 let rn = self.analyze_node(node);
-                let ty = type_of(&rn);
+                let ty = type_of(&rn).struct_name();
 
-                let struct_field = self
-                    .struct_map
-                    .get(ty.to_string().strip_prefix("%").unwrap())
-                    .and_then(|m| m.get(field))
-                    .unwrap();
+                let struct_field = self.struct_map.get(&ty).and_then(|m| m.get(field)).unwrap();
 
                 HirNode::FieldAccess(Box::new(rn), struct_field.index, struct_field.ty.clone())
             }
@@ -234,12 +230,8 @@ impl<'a> FunctionAnalyzer<'a> {
             }
             Node::MethodCall(node, method, args) => {
                 let s = self.analyze_node(node);
-                let s_ty = type_of(&s);
-                let name = format!(
-                    "{}::{}",
-                    s_ty.to_string().strip_prefix("%").unwrap(),
-                    method
-                );
+                let s_name = type_of(&s).struct_name();
+                let name = format!("{}::{}", s_name, method);
 
                 let f = self
                     .functions
