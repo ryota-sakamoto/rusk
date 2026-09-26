@@ -152,7 +152,7 @@ impl<'a> Analyzer<'a> {
                 match node {
                     Node::ImplDef(i) => {
                         for f in &i.functions {
-                            self.functions.insert(
+                            let b = self.functions.insert(
                                 format!("{}::{}", i.name, f.name),
                                 FunctionMetadata {
                                     args: f.args.clone(),
@@ -160,28 +160,25 @@ impl<'a> Analyzer<'a> {
                                     is_public: f.is_public,
                                 },
                             );
+                            if b.is_some() {
+                                panic!("{:?} is duplicated", f.name);
+                            }
+                        }
+                    }
+                    Node::FunctionDef(f) => {
+                        let b = self.functions.insert(
+                            f.full_name(),
+                            FunctionMetadata {
+                                args: f.args.clone(),
+                                ty: f.ty.clone(),
+                                is_public: f.is_public,
+                            },
+                        );
+                        if b.is_some() {
+                            panic!("{:?} is duplicated", f.name);
                         }
                     }
                     _ => {}
-                }
-            }
-        }
-
-        for m in &self.program.modules {
-            for node in &m.nodes {
-                if let Node::FunctionDef(f) = node {
-                    if self.functions.contains_key(f.name.as_str()) {
-                        panic!("{:?} is duplicated", f.name);
-                    }
-
-                    self.functions.insert(
-                        f.full_name(),
-                        FunctionMetadata {
-                            args: f.args.clone(),
-                            ty: f.ty.clone(),
-                            is_public: f.is_public,
-                        },
-                    );
                 }
             }
         }
