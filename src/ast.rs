@@ -42,6 +42,7 @@ impl Function {
 pub struct StructType {
     pub name: String,
     pub fields: Vec<StructField>,
+    pub generics: Vec<String>,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -314,6 +315,8 @@ impl<'a> Parser<'a> {
         }
 
         let name = self.identifier().expect("should be identifier");
+        let generics = self.generics();
+
         if !self.consume(TokenKind::LBrace) {
             panic!("should be TokenKind::LBrace");
         }
@@ -336,7 +339,11 @@ impl<'a> Parser<'a> {
             fields.push(StructField { name, ty });
         }
 
-        Node::StructDef(StructType { name, fields })
+        Node::StructDef(StructType {
+            name,
+            fields,
+            generics,
+        })
     }
 
     fn enum_type(&mut self) -> Node {
@@ -784,6 +791,19 @@ impl<'a> Parser<'a> {
 
         self.pos += 1;
         node
+    }
+
+    fn generics(&mut self) -> Vec<String> {
+        let mut generics = Vec::new();
+        if self.consume(TokenKind::Lt) {
+            while !self.consume(TokenKind::Gt) {
+                generics.push(self.identifier().expect("should be identifier"));
+            }
+
+            return generics;
+        }
+
+        generics
     }
 }
 
