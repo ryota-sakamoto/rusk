@@ -334,8 +334,16 @@ impl<'a> FunctionAnalyzer<'a> {
             Node::Not(r) => HirNode::Not(Box::new(self.analyze_node(r))),
             Node::Struct(name, fields) => {
                 let mut args = Vec::new();
-                for (index, (_, f)) in fields.iter().enumerate() {
-                    args.push((index, self.analyze_node(f)));
+                for (index, (field_name, f)) in fields.iter().enumerate() {
+                    let field_node = self.analyze_node(f);
+                    let field_node_ty = type_of(&field_node);
+                    let field_def = &self.struct_map[name][field_name];
+
+                    if field_node_ty != field_def.ty {
+                        panic!("expected {}, but {}", field_def.ty, field_node_ty);
+                    }
+
+                    args.push((index, field_node));
                 }
 
                 HirNode::Struct(name.clone(), args)
@@ -428,7 +436,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use crate::{
-        ast::{EnumType, EnumVariant, Function, Module, Node, Program},
+        ast::{EnumType, EnumVariant, Function, Module, Node, Program, StructField, StructType},
         semantic::analyze,
         types::Type,
     };
@@ -704,6 +712,37 @@ mod tests {
                         body: Node::Block(vec![Node::PathCall(
                             vec!["Test".to_owned(), "A".to_owned()],
                             vec![],
+                        )]),
+                        ty: Type::Void,
+                        mod_name: None,
+                        is_public: false,
+                    })),
+                ],
+            }],
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"expected i1, but i32"#)]
+    fn check_struct_field_ty() {
+        analyze(&Program {
+            modules: vec![Module {
+                name: None,
+                nodes: vec![
+                    Node::StructDef(StructType {
+                        name: "Test".to_owned(),
+                        fields: vec![StructField {
+                            name: "a".to_owned(),
+                            ty: Type::Bool,
+                        }],
+                        generics: vec![],
+                    }),
+                    Node::FunctionDef(Box::new(Function {
+                        name: "main".to_owned(),
+                        args: Vec::new(),
+                        body: Node::Block(vec![Node::Struct(
+                            "Test".to_owned(),
+                            BTreeMap::from_iter(vec![("a".to_owned(), Node::Num(3))]),
                         )]),
                         ty: Type::Void,
                         mod_name: None,
