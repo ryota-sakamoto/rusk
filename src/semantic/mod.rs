@@ -29,8 +29,46 @@ impl<'a> Analyzer<'a> {
         }
     }
 
+    fn pre_analyze(&mut self) {
+        for m in &self.program.modules {
+            for node in &m.nodes {
+                match node {
+                    Node::ImplDef(i) => {
+                        for f in &i.functions {
+                            let b = self.functions.insert(
+                                format!("{}::{}", i.name, f.name),
+                                FunctionMetadata {
+                                    args: f.args.clone(),
+                                    ty: f.ty.clone(),
+                                    is_public: f.is_public,
+                                },
+                            );
+                            if b.is_some() {
+                                panic!("{:?} is duplicated", f.name);
+                            }
+                        }
+                    }
+                    Node::FunctionDef(f) => {
+                        let b = self.functions.insert(
+                            f.full_name(),
+                            FunctionMetadata {
+                                args: f.args.clone(),
+                                ty: f.ty.clone(),
+                                is_public: f.is_public,
+                            },
+                        );
+                        if b.is_some() {
+                            panic!("{:?} is duplicated", f.name);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
     fn analyze(&mut self) -> HirProgram {
-        self.analyze_functions();
+        self.pre_analyze();
 
         let mut struct_map = BTreeMap::new();
         let mut strings = Vec::new();
@@ -138,6 +176,8 @@ impl<'a> Analyzer<'a> {
             }
         }
 
+        self.post_analyze();
+
         HirProgram {
             functions,
             strings,
@@ -146,43 +186,7 @@ impl<'a> Analyzer<'a> {
         }
     }
 
-    fn analyze_functions(&mut self) {
-        for m in &self.program.modules {
-            for node in &m.nodes {
-                match node {
-                    Node::ImplDef(i) => {
-                        for f in &i.functions {
-                            let b = self.functions.insert(
-                                format!("{}::{}", i.name, f.name),
-                                FunctionMetadata {
-                                    args: f.args.clone(),
-                                    ty: f.ty.clone(),
-                                    is_public: f.is_public,
-                                },
-                            );
-                            if b.is_some() {
-                                panic!("{:?} is duplicated", f.name);
-                            }
-                        }
-                    }
-                    Node::FunctionDef(f) => {
-                        let b = self.functions.insert(
-                            f.full_name(),
-                            FunctionMetadata {
-                                args: f.args.clone(),
-                                ty: f.ty.clone(),
-                                is_public: f.is_public,
-                            },
-                        );
-                        if b.is_some() {
-                            panic!("{:?} is duplicated", f.name);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-
+    fn post_analyze(&mut self) {
         if !self.functions.contains_key("main") {
             panic!("{:?} is not defined", "main");
         }
